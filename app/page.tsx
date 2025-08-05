@@ -1,0 +1,301 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import {
+  Home,
+  GraduationCap,
+  Users,
+  FileText,
+  Calendar,
+  DollarSign,
+  BarChart3,
+  Settings,
+  Plus,
+  Search,
+  Bell,
+  Filter,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import Dashboard from "@/components/dashboard"
+import Applications from "@/components/applications"
+import Professors from "@/components/professors"
+import Documents from "@/components/documents"
+import Timeline from "@/components/timeline"
+import Finances from "@/components/finances"
+import Analytics from "@/components/analytics"
+import SettingsPage from "@/components/settings"
+import UniversityForm from "@/components/forms/university-form"
+import ProfessorForm from "@/components/forms/professor-form"
+import DocumentForm from "@/components/forms/document-form"
+import TimelineForm from "@/components/forms/timeline-form"
+import { db, type University, type Professor, type Document, type TimelineEvent } from "@/lib/supabase"
+import { toast } from "@/hooks/use-toast"
+
+const navigationItems = [
+  { id: "dashboard", label: "Dashboard", icon: Home },
+  { id: "applications", label: "Applications", icon: GraduationCap },
+  { id: "professors", label: "Professors", icon: Users },
+  { id: "documents", label: "Documents", icon: FileText },
+  { id: "timeline", label: "Timeline", icon: Calendar },
+  { id: "finances", label: "Finances", icon: DollarSign },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "settings", label: "Settings", icon: Settings },
+]
+
+export default function PhDTrackerPro() {
+  const [activeTab, setActiveTab] = useState("dashboard")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showUniversityForm, setShowUniversityForm] = useState(false)
+  const [showProfessorForm, setShowProfessorForm] = useState(false)
+  const [showDocumentForm, setShowDocumentForm] = useState(false)
+  const [showTimelineForm, setShowTimelineForm] = useState(false)
+
+  // Data states
+  const [universities, setUniversities] = useState<University[]>([])
+  const [professors, setProfessors] = useState<Professor[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load data on component mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [universitiesData, professorsData, documentsData, eventsData] = await Promise.all([
+        db.getUniversities(),
+        db.getProfessors(),
+        db.getDocuments(),
+        db.getTimelineEvents(),
+      ])
+
+      setUniversities(universitiesData)
+      setProfessors(professorsData)
+      setDocuments(documentsData)
+      setTimelineEvents(eventsData)
+    } catch (error) {
+      console.error("Error loading data:", error)
+      toast({
+        title: "Database Setup Required",
+        description: "Please set up your Supabase database first. Check the README for instructions.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddUniversity = (university: University) => {
+    setUniversities((prev) => [university, ...prev])
+  }
+
+  const handleAddProfessor = (professor: Professor) => {
+    setProfessors((prev) => [professor, ...prev])
+  }
+
+  const handleAddDocument = (document: Document) => {
+    setDocuments((prev) => [document, ...prev])
+  }
+
+  const handleAddTimelineEvent = (event: TimelineEvent) => {
+    setTimelineEvents((prev) =>
+      [event, ...prev.filter((e) => e.id !== event.id)].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      ),
+    )
+  }
+
+  const handleFabClick = () => {
+    switch (activeTab) {
+      case "applications":
+        setShowUniversityForm(true)
+        break
+      case "professors":
+        setShowProfessorForm(true)
+        break
+      case "documents":
+        setShowDocumentForm(true)
+        break
+      case "timeline":
+        setShowTimelineForm(true)
+        break
+      default:
+        setShowUniversityForm(true)
+        break
+    }
+  }
+
+  const renderContent = () => {
+    const props = {
+      universities,
+      professors,
+      documents,
+      timelineEvents,
+      setUniversities,
+      setProfessors,
+      setDocuments,
+      setTimelineEvents,
+    }
+
+    switch (activeTab) {
+      case "dashboard":
+        return <Dashboard {...props} />
+      case "applications":
+        return <Applications {...props} />
+      case "professors":
+        return <Professors {...props} />
+      case "documents":
+        return <Documents {...props} />
+      case "timeline":
+        return <Timeline {...props} />
+      case "finances":
+        return <Finances {...props} />
+      case "analytics":
+        return <Analytics {...props} />
+      case "settings":
+        return <SettingsPage />
+      default:
+        return <Dashboard {...props} />
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="h-8 w-8 text-white animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Loading PhD Tracker Pro</h2>
+          <p className="text-gray-600">Setting up your academic journey...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-primary-200">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">PhD Tracker Pro</h1>
+                <p className="text-xs text-gray-500">Your academic journey organizer</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs bg-red-500">
+                  {timelineEvents.filter((e) => e.status === "today" || e.status === "overdue").length}
+                </Badge>
+              </Button>
+              <Button variant="ghost" size="icon">
+                <Filter className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="mt-3 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search applications, professors, documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-50 border-gray-200"
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="pb-32">{renderContent()}</main>
+
+      {/* Floating Action Button */}
+      <Button
+        onClick={handleFabClick}
+        className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg bg-primary-500 hover:bg-primary-600 z-40"
+        size="icon"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
+        <div className="grid grid-cols-4 gap-1 p-2">
+          {navigationItems.slice(0, 4).map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-colors ${
+                  isActive ? "bg-primary-100 text-primary-600" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Icon className="h-5 w-5 mb-1" />
+                <span className="text-xs font-medium">{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Secondary Navigation */}
+        <div className="grid grid-cols-4 gap-1 p-2 border-t border-gray-100">
+          {navigationItems.slice(4).map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-colors ${
+                  isActive ? "bg-primary-100 text-primary-600" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Icon className="h-5 w-5 mb-1" />
+                <span className="text-xs font-medium">{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Forms */}
+      {showUniversityForm && (
+        <UniversityForm onClose={() => setShowUniversityForm(false)} onSave={handleAddUniversity} />
+      )}
+
+      {showProfessorForm && <ProfessorForm onClose={() => setShowProfessorForm(false)} onSave={handleAddProfessor} />}
+
+      {showDocumentForm && (
+        <DocumentForm
+          onClose={() => setShowDocumentForm(false)}
+          onSave={handleAddDocument}
+          universities={universities}
+        />
+      )}
+
+      {showTimelineForm && (
+        <TimelineForm
+          onClose={() => setShowTimelineForm(false)}
+          onSave={handleAddTimelineEvent}
+          universities={universities}
+          professors={professors}
+        />
+      )}
+    </div>
+  )
+}
