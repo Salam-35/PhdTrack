@@ -1,64 +1,462 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { SettingsIcon, User, Bell, Shield, Download, Upload, Trash2, Mail, Calendar, Moon, Sun } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { useUser } from "@/components/UserProvider"
+import { 
+  SettingsIcon, 
+  User, 
+  Bell, 
+  Shield, 
+  Download, 
+  Upload, 
+  Trash2, 
+  Mail, 
+  Calendar, 
+  Moon, 
+  Sun,
+  Camera,
+  Plus,
+  X,
+  Save,
+  Loader2
+} from "lucide-react"
+import { toast } from "sonner"
+import { log } from "console"
 
 export default function SettingsPage() {
+  const { user, profile, loading: userLoading, updateProfile, uploadAvatar, deleteAvatar,addResearchInterest, removeResearchInterest, refreshProfile } = useUser()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const [loading, setLoading] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
+  const [newInterest, setNewInterest] = useState("")
+  const [formData, setFormData] = useState({
+    display_name: profile?.display_name || "",
+    first_name: profile?.first_name || "",
+    last_name: profile?.last_name || "",
+    phone: profile?.phone || "",
+    current_university: profile?.current_university || "",
+    degree_seeking: profile?.degree_seeking || "",
+    field_of_study: profile?.field_of_study || "",
+    graduation_year: profile?.graduation_year || "",
+    gpa: profile?.gpa || "",
+    bio: profile?.bio || "",
+    linkedin_url: profile?.linkedin_url || "",
+    website_url: profile?.website_url || "",
+    location: profile?.location || "",
+  })
+  
   const [notifications, setNotifications] = useState({
-    deadlines: true,
-    professorReplies: true,
-    documentReminders: true,
-    weeklyDigest: false,
+    deadlines: profile?.notification_preferences.deadlines ?? true,
+    professor_replies: profile?.notification_preferences.professor_replies ?? true,
+    document_reminders: profile?.notification_preferences.document_reminders ?? true,
+    weekly_digest: profile?.notification_preferences.weekly_digest ?? false,
+    email_notifications: profile?.notification_preferences.email_notifications ?? true,
+    push_notifications: profile?.notification_preferences.push_notifications ?? true,
   })
 
+  const [researchInterests, setResearchInterests] = useState(profile?.research_interests || [])
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSaveProfile = async () => {
+    if (!profile) return
+    
+    setLoading(true)
+    try {
+      console.log("🧪 Starting update")
+      await Promise.race([
+        updateProfile({
+          ...formData,
+          degree_seeking: formData.degree_seeking === "PhD" || formData.degree_seeking === "Masters"
+            ? formData.degree_seeking
+            : undefined,
+          research_interests: researchInterests,
+          notification_preferences: {
+            deadlines: Boolean(notifications.deadlines),
+            professor_replies: Boolean(notifications.professor_replies),
+            document_reminders: Boolean(notifications.document_reminders),
+            weekly_digest: Boolean(notifications.weekly_digest),
+            email_notifications: Boolean(notifications.email_notifications),
+            push_notifications: Boolean(notifications.push_notifications),
+          },
+          graduation_year: formData.graduation_year ? Number(formData.graduation_year) : undefined,
+          gpa: formData.gpa ? Number(formData.gpa) : undefined,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("⏱ Timeout after 10s")), 10000))
+      ])
+      console.log("✅ Update finished")
+      await refreshProfile()
+      toast.success("Profile updated successfully!")
+    } catch (error) {
+      toast.error("Failed to update profile")
+      console.error("🚨 Error updating profile:", error)
+    } finally {
+      setLoading(false)
+    }
+
+  }
+
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user?.id) return
+
+    setLoading(true)
+    try {
+      await uploadAvatar(file) // this should already be available via `useUser()`
+      await refreshProfile()
+      toast.success("Avatar updated!")
+    } catch (error) {
+      console.error("Error uploading avatar:", error)
+      toast.error("Failed to upload avatar.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAvatarDelete = async () => {
+    if (!profile?.avatar_url) return
+    try {
+      setLoading(true)
+      await deleteAvatar(profile.avatar_url)
+      toast.success("Profile photo deleted")
+      await refreshProfile()
+    } catch (error) {
+      console.error("Error deleting avatar:", error)
+      toast.error("Failed to delete avatar")
+    } finally {
+      setLoading(false)
+    }
+    
+}
+// const addResearchInterest = () => {
+//       if (newInterest.trim() && !researchInterests.includes(newInterest.trim())) {
+//         setResearchInterests([...researchInterests, newInterest.trim()])
+//         setNewInterest("")
+//       }
+//   }
+  // const removeResearchInterest = (interest: string) => {
+  //   setResearchInterests(researchInterests.filter(i => i !== interest))
+  // }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addResearchInterest()
+    }
+  }
+
+  if (!profile) {
+    return (
+      <div className="p-4 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading profile...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold">Settings</h2>
         <p className="text-gray-600">Manage your account and preferences</p>
       </div>
 
-      {/* Profile Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Camera className="h-5 w-5 text-primary-500" />
+            <span>Profile Picture</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center space-x-6">
+          <Avatar className="h-24 w-24">
+            <AvatarImage src={profile.avatar_url} alt="Profile picture" />
+            <AvatarFallback className="text-lg">
+              {(profile.first_name?.[0] || "") + (profile.last_name?.[0] || "")}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <div className="flex space-x-2">
+              <Button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="bg-primary-500 hover:bg-primary-600"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+                Upload New Photo
+              </Button>
+              {profile.avatar_url && (
+                <Button 
+                  variant="destructive"
+                  onClick={handleAvatarDelete}
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  Delete
+                </Button>
+              )}
+            </div>
+            <p className="text-sm text-gray-500">JPG, PNG up to 5MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+
+      {/* Basic Information */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <User className="h-5 w-5 text-primary-500" />
-            <span>Profile Information</span>
+            <span>Basic Information</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" defaultValue="Alex" />
+              <Label htmlFor="display_name">Display Name</Label>
+              <Input 
+                id="display_name" 
+                value={formData.display_name}
+                onChange={(e) => handleInputChange('display_name', e.target.value)}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" defaultValue="Johnson" />
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" value={profile.email} disabled className="bg-gray-50" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="first_name">First Name</Label>
+              <Input 
+                id="first_name" 
+                value={formData.first_name}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Last Name</Label>
+              <Input 
+                id="last_name" 
+                value={formData.last_name}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input 
+                id="phone" 
+                type="tel" 
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input 
+                id="location" 
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="City, Country"
+              />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="alex.johnson@email.com" />
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea 
+              id="bio" 
+              value={formData.bio}
+              onChange={(e) => handleInputChange('bio', e.target.value)}
+              placeholder="Tell us about yourself..."
+              rows={3}
+            />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="university">Current University</Label>
-            <Input id="university" defaultValue="State University" />
-          </div>
-          <Button className="bg-primary-500 hover:bg-primary-600">Save Changes</Button>
         </CardContent>
       </Card>
+
+      {/* Academic Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <SettingsIcon className="h-5 w-5 text-primary-500" />
+            <span>Academic Information</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="current_university">Current University</Label>
+              <Input 
+                id="current_university" 
+                value={formData.current_university}
+                onChange={(e) => handleInputChange('current_university', e.target.value)}
+                placeholder="University Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="degree_seeking">Degree Seeking</Label>
+              <Select 
+                value={formData.degree_seeking} 
+                onValueChange={(value) => handleInputChange('degree_seeking', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select degree type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Masters">Masters</SelectItem>
+                  <SelectItem value="PhD">PhD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="field_of_study">Field of Study</Label>
+              <Input 
+                id="field_of_study" 
+                value={formData.field_of_study}
+                onChange={(e) => handleInputChange('field_of_study', e.target.value)}
+                placeholder="e.g., Computer Science, Biology"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="graduation_year">Expected Graduation Year</Label>
+              <Input 
+                id="graduation_year" 
+                type="number"
+                value={formData.graduation_year}
+                onChange={(e) => handleInputChange('graduation_year', e.target.value)}
+                placeholder="2025"
+                min="2024"
+                max="2030"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gpa">GPA</Label>
+              <Input 
+                id="gpa" 
+                type="number"
+                step="0.01"
+                min="0"
+                max="4"
+                value={formData.gpa}
+                onChange={(e) => handleInputChange('gpa', e.target.value)}
+                placeholder="3.75"
+              />
+            </div>
+          </div>
+          
+          {/* Research Interests */}
+          <div className="space-y-2">
+            <Label>Research Interests</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {researchInterests.map((interest, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  {interest}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-red-100"
+                    onClick={() => removeResearchInterest(interest)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newInterest}
+                onChange={(e) => setNewInterest(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Add research interest..."
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                onClick={addResearchInterest}
+                size="sm"
+                variant="outline"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Links */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Mail className="h-5 w-5 text-primary-500" />
+            <span>Links & Social</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="linkedin_url">LinkedIn URL</Label>
+              <Input 
+                id="linkedin_url" 
+                value={formData.linkedin_url}
+                onChange={(e) => handleInputChange('linkedin_url', e.target.value)}
+                placeholder="https://linkedin.com/in/username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="website_url">Personal Website</Label>
+              <Input 
+                id="website_url" 
+                value={formData.website_url}
+                onChange={(e) => handleInputChange('website_url', e.target.value)}
+                placeholder="https://yourwebsite.com"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleSaveProfile}
+          disabled={loading}
+          className="bg-primary-500 hover:bg-primary-600"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save Profile
+            </>
+          )}
+        </Button>
+
+      </div>
 
       {/* Notification Settings */}
       <Card>
@@ -85,8 +483,8 @@ export default function SettingsPage() {
               <div className="text-xs text-gray-500">Notifications when professors respond</div>
             </div>
             <Switch
-              checked={notifications.professorReplies}
-              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, professorReplies: checked }))}
+              checked={notifications.professor_replies}
+              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, professor_replies: checked }))}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -95,8 +493,8 @@ export default function SettingsPage() {
               <div className="text-xs text-gray-500">Reminders to complete documents</div>
             </div>
             <Switch
-              checked={notifications.documentReminders}
-              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, documentReminders: checked }))}
+              checked={notifications.document_reminders}
+              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, document_reminders: checked }))}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -105,8 +503,28 @@ export default function SettingsPage() {
               <div className="text-xs text-gray-500">Weekly summary of your progress</div>
             </div>
             <Switch
-              checked={notifications.weeklyDigest}
-              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, weeklyDigest: checked }))}
+              checked={notifications.weekly_digest}
+              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, weekly_digest: checked }))}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium">Email Notifications</div>
+              <div className="text-xs text-gray-500">Receive notifications via email</div>
+            </div>
+            <Switch
+              checked={notifications.email_notifications}
+              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, email_notifications: checked }))}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium">Push Notifications</div>
+              <div className="text-xs text-gray-500">Browser push notifications</div>
+            </div>
+            <Switch
+              checked={notifications.push_notifications}
+              onCheckedChange={(checked) => setNotifications((prev) => ({ ...prev, push_notifications: checked }))}
             />
           </div>
         </CardContent>
@@ -140,7 +558,7 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button variant="outline" className="flex items-center space-x-2 bg-transparent">
               <Download className="h-4 w-4" />
               <span>Export Data</span>
@@ -216,8 +634,8 @@ export default function SettingsPage() {
             <span>December 2024</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span>Data Storage</span>
-            <span>Local Device</span>
+            <span>User ID</span>
+            <span className="font-mono text-xs">{user?.id}</span>
           </div>
           <div className="pt-4 space-y-2">
             <Button variant="outline" className="w-full bg-transparent">
@@ -235,3 +653,4 @@ export default function SettingsPage() {
     </div>
   )
 }
+

@@ -83,7 +83,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { useUser } from "@/context/UserProvider"
+import { useUser } from "@/components/UserProvider"
 import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -97,13 +97,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ChevronDown, Upload, Loader2 } from "lucide-react"
+import { add } from "date-fns"
 
 interface Props {
   onUpload: () => void
 }
 
 export default function DocumentUploadForm({ onUpload }: Props) {
-  const user = useUser()
+  const { user, loading: userLoading } = useUser()
+  // console.log("User in DocumentUploadForm:", user)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [file, setFile] = useState<File | null>(null)
@@ -136,7 +138,7 @@ export default function DocumentUploadForm({ onUpload }: Props) {
       const { data: fileData } = supabase.storage
         .from("documents")
         .getPublicUrl(filePath)
-
+      console.log("user id: ", user.id)
       const { error: insertError } = await supabase.from("documents").insert([
         {
           name: file.name,
@@ -144,6 +146,7 @@ export default function DocumentUploadForm({ onUpload }: Props) {
           note,
           type: docType === "custom" ? customType : docType,
           added_by: user.id,
+          user_id: user.id,
         },
       ])
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useUser } from "@/context/UserProvider"
+import { useUser } from "@/components/UserProvider"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +18,8 @@ import {
 } from "lucide-react"
 
 export default function Dashboard() {
-  const user = useUser()
+  // Fixed: Get user from context properly
+  const { user, loading: userLoading } = useUser()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalApplications: 0,
@@ -33,62 +34,83 @@ export default function Dashboard() {
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   useEffect(() => {
-  if (!user) return
-  const fetchData = async () => {
-    setLoading(true)
+    // Fixed: Check for user properly
+    if (!user?.id) return
+    
+    const fetchData = async () => {
+      setLoading(true)
 
-    const [{ data: universities }, { data: professors }, { data: documents }, { data: events }] =
-      await Promise.all([
-        supabase.from("universities").select("*").eq("added_by", user.id),
-        supabase.from("professors").select("*").eq("added_by", user.id),
-        supabase.from("documents").select("*").eq("added_by", user.id),
-        supabase.from("timeline_events").select("*").eq("added_by", user.id),
-      ])
+      try {
+        // Fixed: Use user_id instead of added_by
+        const [{ data: universities }, { data: professors }, { data: documents }, { data: events }] =
+          await Promise.all([
+            supabase.from("universities").select("*").eq("user_id", user.id),
+            supabase.from("professors").select("*").eq("user_id", user.id),
+            supabase.from("documents").select("*").eq("user_id", user.id),
+            supabase.from("timeline_events").select("*").eq("user_id", user.id),
+          ])
 
-    // 🔴 Updated line: only sum application fees for submitted universities
-    const totalSpent =
-  universities
-    ?.filter(u => u.status === "submitted")
-    .reduce((sum, u) => sum + (Number(u.application_fee) || 0), 0) ?? 0
+        // Calculate stats
+        const totalSpent =
+          universities
+            ?.filter(u => u.status === "submitted")
+            .reduce((sum, u) => sum + (Number(u.application_fee) || 0), 0) ?? 0
 
-    const submitted = universities?.filter(u => u.status === "submitted").length ?? 0
-    const inProgress = universities?.filter(u => u.status === "in-progress").length ?? 0
-    const notStarted = universities?.filter(u => u.status === "not-started").length ?? 0
-    console.log(universities)
-    console.log(totalSpent)
-    const contacted = professors?.filter(p => p.contact_status !== "not-contacted").length ?? 0
+        const submitted = universities?.filter(u => u.status === "submitted").length ?? 0
+        const inProgress = universities?.filter(u => u.status === "in-progress").length ?? 0
+        const notStarted = universities?.filter(u => u.status === "not-started").length ?? 0
+        
+        const contacted = professors?.filter(p => p.contact_status !== "not-contacted").length ?? 0
 
-    setStats({
-      totalApplications: universities?.length ?? 0,
-      professorsContacted: contacted,
-      documentsReady: documents?.length ?? 0,
-      totalSpent, // ✅ already filtered above
-      submitted,
-      inProgress,
-      notStarted,
-    })
+        setStats({
+          totalApplications: universities?.length ?? 0,
+          professorsContacted: contacted,
+          documentsReady: documents?.length ?? 0,
+          totalSpent,
+          submitted,
+          inProgress,
+          notStarted,
+        })
 
-    const now = new Date()
+        const now = new Date()
 
-    const upcoming = events
-      ?.filter(e => new Date(e.date) >= now)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 4)
+        const upcoming = events
+          ?.filter(e => new Date(e.date) >= now)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .slice(0, 4)
 
-    const recent = events
-      ?.filter(e => new Date(e.date) < now)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 4)
+        const recent = events
+          ?.filter(e => new Date(e.date) < now)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 4)
 
-    setUpcomingTasks(upcoming ?? [])
-    setRecentActivity(recent ?? [])
-    setLoading(false)
+        setUpcomingTasks(upcoming ?? [])
+        setRecentActivity(recent ?? [])
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user?.id]) // Fixed: Updated dependency
+
+  // Fixed: Handle loading states
+  if (userLoading || loading) return <div className="p-4">Loading...</div>
+
+  // Fixed: Handle no user state
+  if (!user) {
+    return (
+      <div className="p-4">
+        <div className="text-center py-12">
+          <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to PhD Tracker Pro</h3>
+          <p className="text-gray-500">Please login to view your dashboard.</p>
+        </div>
+      </div>
+    )
   }
-
-  fetchData()
-}, [user])
-
-  if (loading) return <div className="p-4">Loading...</div>
 
   return (
     <div className="p-4 space-y-6">
@@ -153,20 +175,26 @@ export default function Dashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {upcomingTasks.map((task, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium text-sm">{task.title}</p>
-                <p className="text-xs text-gray-500 flex items-center mt-1">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  {task.date}
-                </p>
-              </div>
-              <Badge variant="secondary" className="text-xs capitalize">
-                {task.priority}
-              </Badge>
+          {upcomingTasks.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No upcoming tasks</p>
             </div>
-          ))}
+          ) : (
+            upcomingTasks.map((task, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-sm">{task.title}</p>
+                  <p className="text-xs text-gray-500 flex items-center mt-1">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {task.date}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="text-xs capitalize">
+                  {task.priority}
+                </Badge>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 
@@ -179,12 +207,18 @@ export default function Dashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {recentActivity.map((event, i) => (
-            <div key={i} className="flex flex-col space-y-1 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium">{event.title}</p>
-              <p className="text-xs text-gray-500">{event.date}</p>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No recent activity</p>
             </div>
-          ))}
+          ) : (
+            recentActivity.map((event, i) => (
+              <div key={i} className="flex flex-col space-y-1 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium">{event.title}</p>
+                <p className="text-xs text-gray-500">{event.date}</p>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

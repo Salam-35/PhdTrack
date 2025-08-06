@@ -14,10 +14,20 @@ import {
   Search,
   Bell,
   Filter,
+  User,
+  UserCircle,
+  LogOut,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import Dashboard from "@/components/dashboard"
 import Applications from "@/components/applications"
 import Professors from "@/components/professors"
@@ -32,6 +42,8 @@ import DocumentForm from "@/components/forms/document-form"
 import TimelineForm from "@/components/forms/timeline-form"
 import { db, type University, type Professor, type Document, type TimelineEvent } from "@/lib/supabase"
 import { toast } from "@/hooks/use-toast"
+import { UserCog } from "lucide-react"
+import { useUser } from "@/components/UserProvider"
 
 const navigationItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
@@ -39,18 +51,20 @@ const navigationItems = [
   { id: "professors", label: "Professors", icon: Users },
   { id: "documents", label: "Documents", icon: FileText },
   { id: "timeline", label: "Timeline", icon: Calendar },
-  { id: "finances", label: "Finances", icon: DollarSign },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
-  { id: "settings", label: "Settings", icon: Settings },
+  // { id: "finances", label: "Finances", icon: DollarSign },
+  // { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "settings", label: "Settings", icon: UserCog },
 ]
 
 export default function PhDTrackerPro() {
+  const { user, profile, signOut, loading: userLoading } = useUser()
   const [activeTab, setActiveTab] = useState("dashboard")
   const [searchQuery, setSearchQuery] = useState("")
   const [showUniversityForm, setShowUniversityForm] = useState(false)
   const [showProfessorForm, setShowProfessorForm] = useState(false)
   const [showDocumentForm, setShowDocumentForm] = useState(false)
   const [showTimelineForm, setShowTimelineForm] = useState(false)
+  const [editingTimelineEvent, setEditingTimelineEvent] = useState<TimelineEvent | undefined>()
 
   // Data states
   const [universities, setUniversities] = useState<University[]>([])
@@ -59,20 +73,33 @@ export default function PhDTrackerPro() {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Load data on component mount
+  // Load data on component mount and when user changes
   useEffect(() => {
-    loadData()
-  }, [])
+    if (user?.id && !userLoading) {
+      loadData()
+    }
+  }, [user?.id, userLoading])
 
   const loadData = async () => {
+    if (!user?.id) return
+    
     try {
       setLoading(true)
+      console.log("Loading data for user:", user.id)
+      
       const [universitiesData, professorsData, documentsData, eventsData] = await Promise.all([
         db.getUniversities(),
         db.getProfessors(),
         db.getDocuments(),
         db.getTimelineEvents(),
       ])
+
+      console.log("Loaded data:", {
+        universities: universitiesData.length,
+        professors: professorsData.length,
+        documents: documentsData.length,
+        events: eventsData.length
+      })
 
       setUniversities(universitiesData)
       setProfessors(professorsData)
@@ -81,12 +108,29 @@ export default function PhDTrackerPro() {
     } catch (error) {
       console.error("Error loading data:", error)
       toast({
-        title: "Database Setup Required",
-        description: "Please set up your Supabase database first. Check the README for instructions.",
+        title: "Error Loading Data",
+        description: "Failed to load your data. Please refresh the page.",
         variant: "destructive",
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out."
+      })
+    } catch (error) {
+      console.error("Sign out error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -103,6 +147,7 @@ export default function PhDTrackerPro() {
   }
 
   const handleAddTimelineEvent = (event: TimelineEvent) => {
+    console.log("Adding/updating timeline event:", event)
     setTimelineEvents((prev) =>
       [event, ...prev.filter((e) => e.id !== event.id)].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -111,6 +156,7 @@ export default function PhDTrackerPro() {
   }
 
   const handleFabClick = () => {
+    console.log(`FAB clicked for tab: ${activeTab}`)
     switch (activeTab) {
       case "applications":
         setShowUniversityForm(true)
@@ -127,6 +173,38 @@ export default function PhDTrackerPro() {
       default:
         setShowUniversityForm(true)
         break
+    }
+  }
+
+  const handleTimelineAddClick = () => {
+    console.log("Timeline add button clicked")
+    setEditingTimelineEvent(undefined)
+    setShowTimelineForm(true)
+  }
+
+  const handleTimelineEditClick = (event: TimelineEvent) => {
+    console.log("Timeline edit button clicked", event)
+    setEditingTimelineEvent(event)
+    setShowTimelineForm(true)
+  }
+
+  const handleTimelineDeleteClick = async (eventId: string) => {
+    if (!confirm("Are you sure you want to delete this event?")) return
+    
+    try {
+      await db.deleteTimelineEvent(eventId)
+      setTimelineEvents(prev => prev.filter(e => e.id !== eventId))
+      toast({
+        title: "Event Deleted",
+        description: "The event has been deleted successfully.",
+      })
+    } catch (error) {
+      console.error("Error deleting event:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete event. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -152,11 +230,17 @@ export default function PhDTrackerPro() {
       case "documents":
         return <Documents {...props} />
       case "timeline":
-        return <Timeline {...props} />
-      case "finances":
-        return <Finances {...props} />
-      case "analytics":
-        return <Analytics {...props} />
+        return (
+          <Timeline
+            timelineEvents={timelineEvents}
+            universities={universities}
+            professors={professors}
+            onAddClick={handleTimelineAddClick}
+            onEditClick={handleTimelineEditClick}
+            onDeleteClick={handleTimelineDeleteClick}
+            onUpdate={handleAddTimelineEvent}
+          />
+        )
       case "settings":
         return <SettingsPage />
       default:
@@ -164,7 +248,8 @@ export default function PhDTrackerPro() {
     }
   }
 
-  if (loading) {
+  // Show loading state
+  if (userLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
         <div className="text-center">
@@ -178,6 +263,7 @@ export default function PhDTrackerPro() {
     )
   }
 
+  // This component will only render if user is authenticated (due to AuthGuard)
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
       {/* Header */}
@@ -189,10 +275,11 @@ export default function PhDTrackerPro() {
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">PhD Tracker Pro</h1>
-                <p className="text-xs text-gray-500">Your academic journey organizer</p>
+                <h1 className="text-lg font-bold text-gray-900">Application Tracker Pro</h1>
+                <p className="text-xs text-gray-500">Organise Your PhD Application Process</p>
               </div>
             </div>
+            
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
@@ -200,9 +287,33 @@ export default function PhDTrackerPro() {
                   {timelineEvents.filter((e) => e.status === "today" || e.status === "overdue").length}
                 </Badge>
               </Button>
+              
               <Button variant="ghost" size="icon">
                 <Filter className="h-5 w-5" />
               </Button>
+              
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt="Profile" 
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle className="h-5 w-5" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-medium">{profile?.full_name || user?.email}</p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
+                  </div>
+                  </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -233,8 +344,8 @@ export default function PhDTrackerPro() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
-        <div className="grid grid-cols-4 gap-1 p-2">
-          {navigationItems.slice(0, 4).map((item) => {
+        <div className="grid grid-cols-6 gap-1 p-2">
+          {navigationItems.slice(0, 6).map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
             return (
@@ -252,8 +363,7 @@ export default function PhDTrackerPro() {
           })}
         </div>
 
-        {/* Secondary Navigation */}
-        <div className="grid grid-cols-4 gap-1 p-2 border-t border-gray-100">
+        {/* <div className="grid grid-cols-3 gap-1 p-2 border-t border-gray-100">
           {navigationItems.slice(4).map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -270,7 +380,7 @@ export default function PhDTrackerPro() {
               </button>
             )
           })}
-        </div>
+        </div> */}
       </nav>
 
       {/* Forms */}
@@ -278,7 +388,9 @@ export default function PhDTrackerPro() {
         <UniversityForm onClose={() => setShowUniversityForm(false)} onSave={handleAddUniversity} />
       )}
 
-      {showProfessorForm && <ProfessorForm onClose={() => setShowProfessorForm(false)} onSave={handleAddProfessor} />}
+      {showProfessorForm && (
+        <ProfessorForm onClose={() => setShowProfessorForm(false)} onSave={handleAddProfessor} />
+      )}
 
       {showDocumentForm && (
         <DocumentForm
@@ -290,10 +402,14 @@ export default function PhDTrackerPro() {
 
       {showTimelineForm && (
         <TimelineForm
-          onClose={() => setShowTimelineForm(false)}
+          onClose={() => {
+            setShowTimelineForm(false)
+            setEditingTimelineEvent(undefined)
+          }}
           onSave={handleAddTimelineEvent}
           universities={universities}
           professors={professors}
+          event={editingTimelineEvent}
         />
       )}
     </div>

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Loader2 } from "lucide-react"
 import { db, type TimelineEvent, type University, type Professor } from "@/lib/supabase"
 import { toast } from "@/hooks/use-toast"
+import { useUser } from "@/components/UserProvider"
 
 interface TimelineFormProps {
   onClose: () => void
@@ -21,18 +22,34 @@ interface TimelineFormProps {
 }
 
 export default function TimelineForm({ onClose, onSave, universities, professors, event }: TimelineFormProps) {
+  const { user, loading: userLoading } = useUser()
+  
+  // Early return if user is not loaded yet
+  if (userLoading || !user) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading user data...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     title: event?.title || "",
     description: event?.description || "",
     date: event?.date || "",
     time: event?.time || "",
-    type: event?.type || "deadline",
-    status: event?.status || "upcoming",
-    priority: event?.priority || "medium",
-    university_id: event?.university_id || "",
-    professor_id: event?.professor_id || "",
-    category: event?.category || "application",
+    type: (event?.type as "deadline" | "meeting" | "task" | "milestone" | "reminder") || "deadline",
+    status: (event?.status as "upcoming" | "today" | "completed" | "overdue") || "upcoming",
+    priority: (event?.priority as "high" | "medium" | "low") || "medium",
+    university_id: event?.university_id || "none",
+    professor_id: event?.professor_id || "none",
+    category: (event?.category as "application" | "professor" | "document" | "test" | "interview" | "decision") || "application",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,12 +57,22 @@ export default function TimelineForm({ onClose, onSave, universities, professors
     setLoading(true)
 
     try {
+      // Include user_id in the event data - this was the missing piece!
       const eventData = {
-        ...formData,
-        university_id: formData.university_id || undefined,
-        professor_id: formData.professor_id || undefined,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        date: formData.date,
         time: formData.time || undefined,
+        type: formData.type,
+        status: formData.status,
+        priority: formData.priority,
+        category: formData.category,
+        university_id: formData.university_id === "none" ? undefined : formData.university_id,
+        professor_id: formData.professor_id === "none" ? undefined : formData.professor_id,
+        user_id: user.id, // This is the critical fix - include user_id
       }
+
+      console.log("Submitting event data with user_id:", eventData) // Debug log
 
       let result: TimelineEvent
       if (event) {
@@ -68,7 +95,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
       console.error("Error saving event:", error)
       toast({
         title: "Error",
-        description: "Failed to save event. Please try again.",
+        description: `Failed to save event: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
     } finally {
@@ -76,16 +103,25 @@ export default function TimelineForm({ onClose, onSave, universities, professors
     }
   }
 
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{event ? "Edit Event" : "Add Event"}</CardTitle>
+          <CardTitle>{event ? "Edit Event" : "Add New Event"}</CardTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
         <CardContent>
+          {/* Debug Info - remove in production */}
+          <div className="bg-gray-100 p-2 rounded text-xs text-gray-600 mb-4">
+            Debug: User ID: {user.id}, {universities.length} universities, {professors.length} professors available
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Event Title *</Label>
@@ -137,7 +173,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                 <Label htmlFor="type">Event Type</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, type: value }))}
+                  onValueChange={(value) => handleSelectChange('type', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -155,7 +191,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                 <Label htmlFor="category">Category</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, category: value }))}
+                  onValueChange={(value) => handleSelectChange('category', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -177,7 +213,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                 <Label htmlFor="priority">Priority</Label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, priority: value }))}
+                  onValueChange={(value) => handleSelectChange('priority', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -193,7 +229,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}
+                  onValueChange={(value) => handleSelectChange('status', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -213,7 +249,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                 <Label htmlFor="university_id">Related University (Optional)</Label>
                 <Select
                   value={formData.university_id}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, university_id: value }))}
+                  onValueChange={(value) => handleSelectChange('university_id', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select university" />
@@ -232,7 +268,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                 <Label htmlFor="professor_id">Related Professor (Optional)</Label>
                 <Select
                   value={formData.professor_id}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, professor_id: value }))}
+                  onValueChange={(value) => handleSelectChange('professor_id', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select professor" />
@@ -250,7 +286,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading} className="bg-primary-500 hover:bg-primary-600">

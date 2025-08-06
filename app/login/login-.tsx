@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter()
 
   const handleLogin = async () => {
+    console.log("Logging in with:", { email, password })
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return alert(error.message)
     router.push("/")

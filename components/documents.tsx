@@ -1,457 +1,8 @@
-// "use client"
-
-// import { useState } from "react"
-// import { Card, CardContent, CardHeader } from "@/components/ui/card"
-// import { Badge } from "@/components/ui/badge"
-// import { Button } from "@/components/ui/button"
-// import { Progress } from "@/components/ui/progress"
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-// import {
-//   FileText,
-//   Upload,
-//   Download,
-//   Edit,
-//   Eye,
-//   Clock,
-//   CheckCircle,
-//   Plus,
-//   Search,
-//   Calendar,
-//   User,
-//   School,
-//   Award,
-//   BookOpen,
-//   Mail,
-// } from "lucide-react"
-
-// interface Document {
-//   id: string
-//   name: string
-//   type: "sop" | "personal-statement" | "research-statement" | "cv" | "transcript" | "lor" | "writing-sample" | "other"
-//   university?: string
-//   status: "not-started" | "draft" | "review" | "final" | "submitted"
-//   version: number
-//   wordCount?: number
-//   wordLimit?: number
-//   lastModified: string
-//   deadline?: string
-//   notes: string
-//   sharedWith: string[]
-//   feedback: Array<{
-//     from: string
-//     date: string
-//     comment: string
-//     resolved: boolean
-//   }>
-// }
-
-// export default function Documents() {
-//   const [activeTab, setActiveTab] = useState("all")
-//   const [searchQuery, setSearchQuery] = useState("")
-
-//   const documents: Document[] = [
-//     {
-//       id: "1",
-//       name: "Statement of Purpose - Stanford",
-//       type: "sop",
-//       university: "Stanford University",
-//       status: "final",
-//       version: 3,
-//       wordCount: 987,
-//       wordLimit: 1000,
-//       lastModified: "2024-12-05",
-//       deadline: "2024-12-15",
-//       notes: "Focused on AI safety research. Mentioned Dr. Chen's work.",
-//       sharedWith: ["advisor@university.edu", "mentor@company.com"],
-//       feedback: [
-//         {
-//           from: "Dr. Johnson (Advisor)",
-//           date: "2024-12-03",
-//           comment: "Great improvement on the research motivation section. Consider adding more specific examples.",
-//           resolved: true,
-//         },
-//         {
-//           from: "Sarah (Mentor)",
-//           date: "2024-12-04",
-//           comment: "The conclusion could be stronger. Maybe tie back to your long-term goals.",
-//           resolved: false,
-//         },
-//       ],
-//     },
-//     {
-//       id: "2",
-//       name: "Research Statement - MIT",
-//       type: "research-statement",
-//       university: "MIT",
-//       status: "review",
-//       version: 2,
-//       wordCount: 456,
-//       wordLimit: 500,
-//       lastModified: "2024-12-04",
-//       deadline: "2024-12-01",
-//       notes: "Robotics focus. Need to add more technical details.",
-//       sharedWith: ["advisor@university.edu"],
-//       feedback: [
-//         {
-//           from: "Dr. Johnson (Advisor)",
-//           date: "2024-12-04",
-//           comment: "Add more details about your computer vision experience.",
-//           resolved: false,
-//         },
-//       ],
-//     },
-//     {
-//       id: "3",
-//       name: "Personal Statement - Berkeley",
-//       type: "personal-statement",
-//       university: "UC Berkeley",
-//       status: "draft",
-//       version: 1,
-//       wordCount: 1150,
-//       wordLimit: 1200,
-//       lastModified: "2024-12-02",
-//       deadline: "2024-12-10",
-//       notes: "Statistics program. Emphasize quantitative background.",
-//       sharedWith: [],
-//       feedback: [],
-//     },
-//     {
-//       id: "4",
-//       name: "Academic CV",
-//       type: "cv",
-//       status: "final",
-//       version: 5,
-//       lastModified: "2024-11-28",
-//       notes: "Updated with recent publications and conference presentations.",
-//       sharedWith: ["career@university.edu"],
-//       feedback: [
-//         {
-//           from: "Career Services",
-//           date: "2024-11-25",
-//           comment: "Consider adding more details about your teaching experience.",
-//           resolved: true,
-//         },
-//       ],
-//     },
-//     {
-//       id: "5",
-//       name: "Undergraduate Transcript",
-//       type: "transcript",
-//       status: "submitted",
-//       version: 1,
-//       lastModified: "2024-11-20",
-//       notes: "Official transcript from registrar. GPA: 3.9/4.0",
-//       sharedWith: [],
-//       feedback: [],
-//     },
-//   ]
-
-//   const getStatusColor = (status: Document["status"]) => {
-//     switch (status) {
-//       case "not-started":
-//         return "bg-gray-500"
-//       case "draft":
-//         return "bg-blue-500"
-//       case "review":
-//         return "bg-yellow-500"
-//       case "final":
-//         return "bg-green-500"
-//       case "submitted":
-//         return "bg-purple-500"
-//       default:
-//         return "bg-gray-500"
-//     }
-//   }
-
-//   const getTypeIcon = (type: Document["type"]) => {
-//     switch (type) {
-//       case "sop":
-//         return <BookOpen className="h-4 w-4" />
-//       case "personal-statement":
-//         return <User className="h-4 w-4" />
-//       case "research-statement":
-//         return <Award className="h-4 w-4" />
-//       case "cv":
-//         return <FileText className="h-4 w-4" />
-//       case "transcript":
-//         return <School className="h-4 w-4" />
-//       case "lor":
-//         return <Mail className="h-4 w-4" />
-//       default:
-//         return <FileText className="h-4 w-4" />
-//     }
-//   }
-
-//   const getTypeColor = (type: Document["type"]) => {
-//     switch (type) {
-//       case "sop":
-//         return "text-blue-500"
-//       case "personal-statement":
-//         return "text-green-500"
-//       case "research-statement":
-//         return "text-purple-500"
-//       case "cv":
-//         return "text-orange-500"
-//       case "transcript":
-//         return "text-red-500"
-//       case "lor":
-//         return "text-pink-500"
-//       default:
-//         return "text-gray-500"
-//     }
-//   }
-
-//   const getDaysUntilDeadline = (deadline?: string) => {
-//     if (!deadline) return null
-//     const days = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-//     return days
-//   }
-
-//   const filteredDocuments = documents.filter((doc) => {
-//     const matchesSearch =
-//       doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-//       doc.university?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-//       doc.type.toLowerCase().includes(searchQuery.toLowerCase())
-
-//     if (activeTab === "all") return matchesSearch
-//     if (activeTab === "pending") return matchesSearch && ["not-started", "draft", "review"].includes(doc.status)
-//     if (activeTab === "deadlines") return matchesSearch && doc.deadline && getDaysUntilDeadline(doc.deadline)! <= 7
-//     return matchesSearch && doc.type === activeTab
-//   })
-
-//   const documentStats = {
-//     total: documents.length,
-//     completed: documents.filter((doc) => ["final", "submitted"].includes(doc.status)).length,
-//     pending: documents.filter((doc) => ["not-started", "draft", "review"].includes(doc.status)).length,
-//     overdue: documents.filter((doc) => doc.deadline && getDaysUntilDeadline(doc.deadline)! < 0).length,
-//   }
-
-//   return (
-//     <div className="p-4 space-y-6">
-//       {/* Header */}
-//       <div className="flex items-center justify-between">
-//         <div>
-//           <h2 className="text-2xl font-bold">Document Manager</h2>
-//           <p className="text-gray-600">Organize and track your application documents</p>
-//         </div>
-//         <Button className="bg-primary-500 hover:bg-primary-600">
-//           <Plus className="h-4 w-4 mr-2" />
-//           Add Document
-//         </Button>
-//       </div>
-
-//       {/* Stats Cards */}
-//       <div className="grid grid-cols-2 gap-4">
-//         <Card>
-//           <CardContent className="p-4">
-//             <div className="flex items-center justify-between">
-//               <div>
-//                 <p className="text-sm text-gray-600">Total Documents</p>
-//                 <p className="text-2xl font-bold">{documentStats.total}</p>
-//               </div>
-//               <FileText className="h-8 w-8 text-primary-500" />
-//             </div>
-//           </CardContent>
-//         </Card>
-//         <Card>
-//           <CardContent className="p-4">
-//             <div className="flex items-center justify-between">
-//               <div>
-//                 <p className="text-sm text-gray-600">Completed</p>
-//                 <p className="text-2xl font-bold">{documentStats.completed}</p>
-//               </div>
-//               <CheckCircle className="h-8 w-8 text-green-500" />
-//             </div>
-//           </CardContent>
-//         </Card>
-//       </div>
-
-//       {/* Search Bar */}
-//       <div className="relative">
-//         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-//         <input
-//           type="text"
-//           placeholder="Search documents..."
-//           value={searchQuery}
-//           onChange={(e) => setSearchQuery(e.target.value)}
-//           className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-//         />
-//       </div>
-
-//       {/* Tabs */}
-//       <Tabs value={activeTab} onValueChange={setActiveTab}>
-//         <TabsList className="grid w-full grid-cols-4">
-//           <TabsTrigger value="all">All</TabsTrigger>
-//           <TabsTrigger value="pending">Pending</TabsTrigger>
-//           <TabsTrigger value="sop">SOPs</TabsTrigger>
-//           <TabsTrigger value="deadlines">Deadlines</TabsTrigger>
-//         </TabsList>
-
-//         <TabsContent value={activeTab} className="space-y-4 mt-6">
-//           {filteredDocuments.map((doc) => (
-//             <Card key={doc.id} className="overflow-hidden">
-//               <CardHeader className="pb-3">
-//                 <div className="flex items-start justify-between">
-//                   <div className="flex-1">
-//                     <div className="flex items-center space-x-2 mb-1">
-//                       <div className={getTypeColor(doc.type)}>{getTypeIcon(doc.type)}</div>
-//                       <h3 className="font-bold text-lg">{doc.name}</h3>
-//                       <Badge className={`${getStatusColor(doc.status)} text-white`}>
-//                         {doc.status.replace("-", " ")}
-//                       </Badge>
-//                     </div>
-//                     {doc.university && <p className="text-sm text-gray-600">{doc.university}</p>}
-//                     <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-//                       <span>Version {doc.version}</span>
-//                       <span>Modified {new Date(doc.lastModified).toLocaleDateString()}</span>
-//                     </div>
-//                   </div>
-//                   <div className="flex space-x-1">
-//                     <Button variant="ghost" size="icon" className="h-8 w-8">
-//                       <Eye className="h-4 w-4" />
-//                     </Button>
-//                     <Button variant="ghost" size="icon" className="h-8 w-8">
-//                       <Edit className="h-4 w-4" />
-//                     </Button>
-//                     <Button variant="ghost" size="icon" className="h-8 w-8">
-//                       <Download className="h-4 w-4" />
-//                     </Button>
-//                   </div>
-//                 </div>
-//               </CardHeader>
-
-//               <CardContent className="space-y-4">
-//                 {/* Word Count Progress */}
-//                 {doc.wordCount && doc.wordLimit && (
-//                   <div className="space-y-2">
-//                     <div className="flex justify-between text-sm">
-//                       <span>Word Count</span>
-//                       <span>
-//                         {doc.wordCount}/{doc.wordLimit}
-//                       </span>
-//                     </div>
-//                     <Progress value={(doc.wordCount / doc.wordLimit) * 100} className="h-2" />
-//                   </div>
-//                 )}
-
-//                 {/* Deadline Warning */}
-//                 {doc.deadline && (
-//                   <div
-//                     className={`flex items-center justify-between p-3 rounded-lg ${
-//                       getDaysUntilDeadline(doc.deadline)! <= 3
-//                         ? "bg-red-50"
-//                         : getDaysUntilDeadline(doc.deadline)! <= 7
-//                           ? "bg-yellow-50"
-//                           : "bg-blue-50"
-//                     }`}
-//                   >
-//                     <div className="flex items-center space-x-2">
-//                       <Calendar className="h-4 w-4" />
-//                       <span className="text-sm font-medium">Deadline</span>
-//                     </div>
-//                     <span
-//                       className={`text-sm font-medium ${
-//                         getDaysUntilDeadline(doc.deadline)! <= 3
-//                           ? "text-red-600"
-//                           : getDaysUntilDeadline(doc.deadline)! <= 7
-//                             ? "text-yellow-600"
-//                             : "text-blue-600"
-//                       }`}
-//                     >
-//                       {getDaysUntilDeadline(doc.deadline)! > 0
-//                         ? `${getDaysUntilDeadline(doc.deadline)} days left`
-//                         : "Overdue"}
-//                     </span>
-//                   </div>
-//                 )}
-
-//                 {/* Shared With */}
-//                 {doc.sharedWith.length > 0 && (
-//                   <div className="bg-gray-50 rounded-lg p-3">
-//                     <p className="text-sm font-medium mb-2">Shared with:</p>
-//                     <div className="space-y-1">
-//                       {doc.sharedWith.map((email, index) => (
-//                         <div key={index} className="flex items-center space-x-2 text-sm">
-//                           <User className="h-3 w-3 text-gray-400" />
-//                           <span>{email}</span>
-//                         </div>
-//                       ))}
-//                     </div>
-//                   </div>
-//                 )}
-
-//                 {/* Feedback */}
-//                 {doc.feedback.length > 0 && (
-//                   <div className="space-y-3">
-//                     <p className="text-sm font-medium">Recent Feedback:</p>
-//                     {doc.feedback.slice(0, 2).map((feedback, index) => (
-//                       <div
-//                         key={index}
-//                         className={`p-3 rounded-lg border-l-4 ${
-//                           feedback.resolved ? "border-green-500 bg-green-50" : "border-yellow-500 bg-yellow-50"
-//                         }`}
-//                       >
-//                         <div className="flex items-center justify-between mb-1">
-//                           <span className="text-sm font-medium">{feedback.from}</span>
-//                           <div className="flex items-center space-x-2">
-//                             <span className="text-xs text-gray-500">
-//                               {new Date(feedback.date).toLocaleDateString()}
-//                             </span>
-//                             {feedback.resolved ? (
-//                               <CheckCircle className="h-4 w-4 text-green-500" />
-//                             ) : (
-//                               <Clock className="h-4 w-4 text-yellow-500" />
-//                             )}
-//                           </div>
-//                         </div>
-//                         <p className="text-sm text-gray-700">{feedback.comment}</p>
-//                       </div>
-//                     ))}
-//                     {doc.feedback.length > 2 && (
-//                       <Button variant="outline" size="sm" className="w-full bg-transparent">
-//                         View all {doc.feedback.length} comments
-//                       </Button>
-//                     )}
-//                   </div>
-//                 )}
-
-//                 {/* Notes */}
-//                 {doc.notes && (
-//                   <div className="bg-blue-50 rounded-lg p-3">
-//                     <p className="text-sm font-medium mb-1">Notes:</p>
-//                     <p className="text-sm text-gray-700">{doc.notes}</p>
-//                   </div>
-//                 )}
-
-//                 {/* Action Buttons */}
-//                 <div className="flex space-x-2 pt-2">
-//                   <Button size="sm" className="flex-1 bg-primary-500 hover:bg-primary-600">
-//                     <Edit className="h-4 w-4 mr-1" />
-//                     Edit
-//                   </Button>
-//                   <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-//                     <Upload className="h-4 w-4 mr-1" />
-//                     Upload
-//                   </Button>
-//                   <Button size="sm" variant="outline">
-//                     <Eye className="h-4 w-4" />
-//                   </Button>
-//                 </div>
-//               </CardContent>
-//             </Card>
-//           ))}
-//         </TabsContent>
-//       </Tabs>
-//     </div>
-//   )
-// }
-
-
 "use client"
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { useUser } from "@/context/UserProvider"
+import { useUser } from "@/components/UserProvider"
 import DocumentUploadForm from "@/components/forms/document-upload-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -478,7 +29,7 @@ interface University {
   cv_required: boolean
   lor_required: boolean
   transcript_required: boolean
-  added_by: string
+  user_id: string
 }
 
 interface Document {
@@ -488,16 +39,18 @@ interface Document {
   note?: string
   file_url: string
   created_at: string
-  added_by: string
+  user_id: string
 }
 
 export default function DocumentsPage() {
-  const user = useUser()
+  // Fixed: Get user from context properly
+  const { user, loading: userLoading } = useUser()
   const [universities, setUniversities] = useState<University[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchData = async () => {
+    // Fixed: Check user properly
     if (!user?.id) {
       console.warn("User ID is missing, skipping fetch.")
       return
@@ -506,9 +59,10 @@ export default function DocumentsPage() {
     setLoading(true)
 
     try {
+      // Fixed: Use user_id instead of added_by
       const [universityResponse, documentResponse] = await Promise.all([
-        supabase.from("universities").select("*").eq("added_by", user.id),
-        supabase.from("documents").select("*").eq("added_by", user.id).order("created_at", { ascending: false }),
+        supabase.from("universities").select("*").eq("user_id", user.id),
+        supabase.from("documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ])
 
       if (universityResponse.error) {
@@ -586,12 +140,28 @@ export default function DocumentsPage() {
     if (user?.id) {
       fetchData()
     }
-  }, [user])
+  }, [user?.id]) // Fixed: Updated dependency
 
-  if (loading) {
+  // Fixed: Handle loading states
+  if (userLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Fixed: Handle no user state
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-7xl mx-auto p-6 space-y-8">
+          <div className="text-center">
+            <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h1 className="text-4xl font-bold text-gray-900">Documents Center</h1>
+            <p className="text-lg text-gray-600">Please login to manage your documents</p>
+          </div>
+        </div>
       </div>
     )
   }

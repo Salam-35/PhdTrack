@@ -1,31 +1,36 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { supabase } from "@/lib/supabase"
+import { Session, User } from "@supabase/supabase-js"
 
-const UserContext = createContext(null)
+// Create context
+const UserContext = createContext<User | null>(null)
 
-export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
+// Exportable hook
+export function useUser() {
+  return useContext(UserContext)
+}
+
+// Provider component
+export function UserProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    let mounted = true
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) setUser(session?.user ?? null)
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
     })
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) setUser(session?.user ?? null)
+    // Fetch initial user session
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null)
     })
 
     return () => {
-      mounted = false
-      listener?.subscription.unsubscribe()
+      authListener.subscription.unsubscribe()
     }
   }, [])
 
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>
 }
 
-export const useUser = () => useContext(UserContext)
