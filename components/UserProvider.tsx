@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session } from '@supabase/supabase-js'
+import { User } from '@supabase/supabase-js'
 import { supabase, db, type UserProfile } from '@/lib/supabase'
 
 interface UserContextType {
@@ -29,62 +29,72 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     let mounted = true
 
-    // Helper to handle session changes without blocking UI
-    const handleSession = (session: Session | null) => {
-      if (!mounted) return
-      setUser(session?.user ?? null)
-
-      if (session?.user) {
-        // Load profile asynchronously but don't block loading state
-        loadUserProfile(session.user.id)
-      } else {
-        setProfile(null)
-      }
-
-      setLoading(false)
-    }
-
-    // Initial session check
-    supabase.auth
-      .getSession()
-      .then(async ({ data: { session }, error }) => {
+    // Enhanced session checking
+    const initializeAuth = async () => {
+      try {
+        // Get initial session with retry
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
         if (error) {
           console.error('Session error:', error)
+          // Clear any corrupted session data
           await supabase.auth.signOut()
         }
-        console.log('Initial session:', session ? 'Found' : 'None')
-        handleSession(session)
-      })
-      .catch(error => {
+
+        if (mounted) {
+          console.log('Initial session:', session ? 'Found' : 'None')
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            await loadUserProfile(session.user.id)
+          }
+          
+          setLoading(false)
+        }
+      } catch (error) {
         console.error('Auth initialization error:', error)
         if (mounted) {
           setUser(null)
           setProfile(null)
           setLoading(false)
         }
-      })
+      }
+    }
 
-    // Auth state listener
+    initializeAuth()
+
+    // Enhanced auth state listener with better error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session ? 'Session exists' : 'No session')
+        
+        if (!mounted) return
 
-        handleSession(session)
-
-        if (!session?.user) return
-
-        // For new sign-ups, create profile if it doesn't exist
-        if (event === 'SIGNED_IN') {
-          try {
-            const existingProfile = await db.getUserProfile(session.user.id)
-            if (!existingProfile) {
-              console.log('Creating default profile for new user')
-              await db.createDefaultProfile(session.user)
-              await loadUserProfile(session.user.id)
+        try {
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            await loadUserProfile(session.user.id)
+            
+            // For new sign-ups, create profile if it doesn't exist
+            if (event === 'SIGNED_IN') {
+              const existingProfile = await db.getUserProfile(session.user.id)
+              if (!existingProfile) {
+                console.log('Creating default profile for new user')
+                await db.createDefaultProfile(session.user)
+                await loadUserProfile(session.user.id)
+              }
             }
-          } catch (error) {
-            console.error('Auth state change error:', error)
+          } else {
+            setProfile(null)
           }
+        } catch (error) {
+          console.error('Auth state change error:', error)
+          // On error, clear user state
+          setUser(null)
+          setProfile(null)
+        } finally {
+          setLoading(false)
         }
       }
     )
