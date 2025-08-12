@@ -27,83 +27,74 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let mounted = true
+      let mounted = true;
 
-    // Enhanced session checking
-    const initializeAuth = async () => {
-      try {
-        // Get initial session with retry
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Session error:', error)
-          // Clear any corrupted session data
-          await supabase.auth.signOut()
-        }
-
-        if (mounted) {
-          console.log('Initial session:', session ? 'Found' : 'None')
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            await loadUserProfile(session.user.id)
-          }
-          
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error)
-        if (mounted) {
-          setUser(null)
-          setProfile(null)
-          setLoading(false)
-        }
-      }
-    }
-
-    initializeAuth()
-
-    // Enhanced auth state listener with better error handling
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session ? 'Session exists' : 'No session')
-        
-        if (!mounted) return
-
+      const initializeAuth = async () => {
         try {
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            await loadUserProfile(session.user.id)
-            
-            // For new sign-ups, create profile if it doesn't exist
-            if (event === 'SIGNED_IN') {
-              const existingProfile = await db.getUserProfile(session.user.id)
-              if (!existingProfile) {
-                console.log('Creating default profile for new user')
-                await db.createDefaultProfile(session.user)
-                await loadUserProfile(session.user.id)
-              }
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) {
+            console.error('Session error:', error);
+            await supabase.auth.signOut();
+          }
+
+          if (mounted) {
+            console.log('Initial session:', session ? 'Found' : 'None');
+            setUser(session?.user ?? null);
+            if (session?.user) {
+              await loadUserProfile(session.user.id);
             }
-          } else {
-            setProfile(null)
           }
         } catch (error) {
-          console.error('Auth state change error:', error)
-          // On error, clear user state
-          setUser(null)
-          setProfile(null)
+          console.error('Auth initialization error:', error);
+          if (mounted) {
+            setUser(null);
+            setProfile(null);
+          }
         } finally {
-          setLoading(false)
+          // ✅ Always set loading false here
+          if (mounted) setLoading(false);
         }
-      }
-    )
+      };
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }, [])
+      initializeAuth();
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
+          if (!mounted) return;
+
+          try {
+            setUser(session?.user ?? null);
+
+            if (session?.user) {
+              await loadUserProfile(session.user.id);
+              if (event === 'SIGNED_IN') {
+                const existingProfile = await db.getUserProfile(session.user.id);
+                if (!existingProfile) {
+                  await db.createDefaultProfile(session.user);
+                  await loadUserProfile(session.user.id);
+                }
+              }
+            } else {
+              setProfile(null);
+            }
+          } catch (error) {
+            console.error('Auth state change error:', error);
+            setUser(null);
+            setProfile(null);
+          } finally {
+            // ✅ Also ensure loading is false here
+            setLoading(false);
+          }
+        }
+      );
+
+      return () => {
+        mounted = false;
+        subscription.unsubscribe();
+      };
+    }, []);
+
 
   const loadUserProfile = async (userId: string) => {
     try {
@@ -203,8 +194,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await supabase.storage.from("avatars").remove([oldFile])
       }
     }
-
-    // Upload new avatar
     const { data, error } = await supabase.storage
       .from("avatars")
       .upload(fileName, file)
