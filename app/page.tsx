@@ -87,12 +87,13 @@ export default function PhDTrackerPro() {
       setLoading(true)
       console.log("Loading data for user:", user.id)
       
-      const [universitiesData, professorsData, documentsData, eventsData] = await Promise.all([
-        db.getUniversities(),
-        db.getProfessors(),
-        db.getDocuments(),
-        db.getTimelineEvents(),
-      ])
+    const uid = user.id
+    const [universitiesData, professorsData, documentsData, eventsData] = await Promise.all([
+      db.getUniversities(uid),
+      db.getProfessors(uid),
+      db.getDocuments(uid),
+      db.getTimelineEvents(uid),
+    ])
 
       console.log("Loaded data:", {
         universities: universitiesData.length,
