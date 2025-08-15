@@ -52,10 +52,9 @@ import AuthGuard from "@/components/AuthGuard"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "PhD Tracker Pro",
+  title: "PhD Application Tracker ",
   description: "Your comprehensive PhD application organizer",
   manifest: "/manifest.json",
-  generator: "v0.dev",
 }
 
 export const viewport: Viewport = {

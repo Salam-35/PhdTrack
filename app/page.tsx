@@ -85,23 +85,15 @@ export default function PhDTrackerPro() {
     
     try {
       setLoading(true)
-      console.log("Loading data for user:", user.id)
       
-    const uid = user.id
-    const [universitiesData, professorsData, documentsData, eventsData] = await Promise.all([
-      db.getUniversities(uid),
-      db.getProfessors(uid),
-      db.getDocuments(uid),
-      db.getTimelineEvents(uid),
-    ])
+      const [universitiesData, professorsData, documentsData, eventsData] = await Promise.all([
+        db.getUniversities(),
+        db.getProfessors(),
+        db.getDocuments(),
+        db.getTimelineEvents(),
+      ])
 
-      console.log("Loaded data:", {
-        universities: universitiesData.length,
-        professors: professorsData.length,
-        documents: documentsData.length,
-        events: eventsData.length
-      })
-
+    
       setUniversities(universitiesData)
       setProfessors(professorsData)
       setDocuments(documentsData)
@@ -148,7 +140,6 @@ export default function PhDTrackerPro() {
   }
 
   const handleAddTimelineEvent = (event: TimelineEvent) => {
-    console.log("Adding/updating timeline event:", event)
     setTimelineEvents((prev) =>
       [event, ...prev.filter((e) => e.id !== event.id)].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -157,7 +148,6 @@ export default function PhDTrackerPro() {
   }
 
   const handleFabClick = () => {
-    console.log(`FAB clicked for tab: ${activeTab}`)
     switch (activeTab) {
       case "applications":
         setShowUniversityForm(true)
@@ -178,13 +168,11 @@ export default function PhDTrackerPro() {
   }
 
   const handleTimelineAddClick = () => {
-    console.log("Timeline add button clicked")
     setEditingTimelineEvent(undefined)
     setShowTimelineForm(true)
   }
 
   const handleTimelineEditClick = (event: TimelineEvent) => {
-    console.log("Timeline edit button clicked", event)
     setEditingTimelineEvent(event)
     setShowTimelineForm(true)
   }
@@ -313,7 +301,12 @@ export default function PhDTrackerPro() {
                     <p className="text-sm font-medium">{profile?.full_name || user?.email}</p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
                   </div>
-                  </DropdownMenuContent>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>

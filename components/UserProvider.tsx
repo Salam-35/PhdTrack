@@ -25,75 +25,36 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-      let mounted = true;
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setUser(session.user)
+        await loadUserProfile(session.user.id)
+      }
+      setInitialized(true)
+      setLoading(false)
+    }
 
-      const initializeAuth = async () => {
-        try {
-          const { data: { session }, error } = await supabase.auth.getSession();
-          if (error) {
-            console.error('Session error:', error);
-            await supabase.auth.signOut();
-          }
+    checkUser()
 
-          if (mounted) {
-            console.log('Initial session:', session ? 'Found' : 'None');
-            setUser(session?.user ?? null);
-            if (session?.user) {
-              await loadUserProfile(session.user.id);
-            }
-          }
-        } catch (error) {
-          console.error('Auth initialization error:', error);
-          if (mounted) {
-            setUser(null);
-            setProfile(null);
-          }
-        } finally {
-          // ✅ Always set loading false here
-          if (mounted) setLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (initialized) {
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          loadUserProfile(session.user.id)
+        } else {
+          setProfile(null)
         }
-      };
+      }
+    })
 
-      initializeAuth();
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
-          if (!mounted) return;
-
-          try {
-            setUser(session?.user ?? null);
-
-            if (session?.user) {
-              await loadUserProfile(session.user.id);
-              if (event === 'SIGNED_IN') {
-                const existingProfile = await db.getUserProfile(session.user.id);
-                if (!existingProfile) {
-                  await db.createDefaultProfile(session.user);
-                  await loadUserProfile(session.user.id);
-                }
-              }
-            } else {
-              setProfile(null);
-            }
-          } catch (error) {
-            console.error('Auth state change error:', error);
-            setUser(null);
-            setProfile(null);
-          } finally {
-            // ✅ Also ensure loading is false here
-            setLoading(false);
-          }
-        }
-      );
-
-      return () => {
-        mounted = false;
-        subscription.unsubscribe();
-      };
-    }, []);
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [initialized])
 
 
   const loadUserProfile = async (userId: string) => {

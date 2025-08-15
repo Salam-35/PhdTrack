@@ -25,22 +25,17 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Redirect logic
   useEffect(() => {
-    if (loading) return // Wait for auth check
+    if (loading) return;
 
-    const isPublicRoute = publicRoutes.includes(pathname)
-    
+    const isPublicRoute = publicRoutes.includes(pathname);
+
     if (!user && !isPublicRoute) {
-      // User not authenticated and trying to access protected route
-      return // Show auth form instead of redirecting
+      router.push('/login');
+    } else if (user && isPublicRoute) {
+      router.push('/');
     }
-    
-    if (user && isPublicRoute) {
-      // User authenticated but on auth page, redirect to home
-      router.push('/')
-    }
-  }, [user, loading, pathname, router])
+  }, [user, loading, pathname, router]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,7 +74,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     }
   }
 
-  // Show loading screen while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
@@ -92,11 +86,12 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           <Loader2 className="h-6 w-6 animate-spin mx-auto mt-4 text-primary-500" />
         </div>
       </div>
-    )
+    );
   }
 
-  // Show auth form if user not authenticated and not on public route
-  if (!user && !publicRoutes.includes(pathname)) {
+  const isPublicRoute = publicRoutes.includes(pathname);
+
+  if (!user && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -169,9 +164,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  // User is authenticated or on public route, show children
-  return <>{children}</>
-}
+  return <>{children}</>;
+ }
