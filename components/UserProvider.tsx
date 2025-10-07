@@ -28,43 +28,107 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+    let authTimeout: NodeJS.Timeout
+
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        setUser(session.user)
-        await loadUserProfile(session.user.id)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (isMounted) {
+          if (session) {
+            setUser(session.user)
+            await loadUserProfile(session.user.id)
+          }
+          setInitialized(true)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error checking user session:', error)
+        if (isMounted) {
+          setLoading(false)
+          setInitialized(true)
+        }
       }
-      setInitialized(true)
-      setLoading(false)
     }
+
+    // Set a timeout to prevent infinite loading states
+    authTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.log('Authentication check timeout - falling back to unauthenticated state')
+        setLoading(false)
+        setInitialized(true)
+        setUser(null)
+        setProfile(null)
+      }
+    }, 10000) // 10 second timeout
 
     checkUser()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (initialized) {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          loadUserProfile(session.user.id)
-        } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (isMounted) {
+        console.log('Auth state changed:', event, session?.user?.id)
+
+        // Clear the timeout since we got an auth state change
+        if (authTimeout) {
+          clearTimeout(authTimeout)
+        }
+
+        // Handle different auth events
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            setUser(session.user)
+            await loadUserProfile(session.user.id)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
           setProfile(null)
         }
+
+        setInitialized(true)
+        setLoading(false)
       }
     })
 
-    return () => {
-      subscription.unsubscribe()
+    // Handle visibility change to refresh auth state when tab becomes active
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMounted) {
+        // Only refresh if we think we have a user but haven't loaded profile recently
+        if (user && !profile && !loading) {
+          console.log('Tab became visible - refreshing user state')
+          loadUserProfile(user.id)
+        }
+      }
     }
-  }, [initialized])
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      isMounted = false
+      if (authTimeout) {
+        clearTimeout(authTimeout)
+      }
+      subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
 
   const loadUserProfile = async (userId: string) => {
     try {
       console.log('Loading profile for user:', userId)
-      const userProfile = await db.getUserProfile(userId)
+
+      // Add a timeout to the profile loading
+      const profilePromise = db.getUserProfile(userId)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile load timeout')), 5000)
+      )
+
+      const userProfile = await Promise.race([profilePromise, timeoutPromise]) as any
       setProfile(userProfile)
       console.log('Profile loaded:', userProfile ? 'Success' : 'Not found')
     } catch (error) {
       console.error('Error loading user profile:', error)
+      // Still set profile to null, but don't fail the auth completely
       setProfile(null)
     }
   }

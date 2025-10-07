@@ -24,9 +24,24 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [authTimeout, setAuthTimeout] = useState(false)
+
+  // Add timeout for stuck loading states
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        console.log('AuthGuard loading timeout')
+        setAuthTimeout(true)
+      }, 8000) // 8 second timeout
+
+      return () => clearTimeout(timeout)
+    } else {
+      setAuthTimeout(false)
+    }
+  }, [loading])
 
   useEffect(() => {
-    if (loading) return;
+    if (loading && !authTimeout) return;
 
     const isPublicRoute = publicRoutes.includes(pathname);
 
@@ -35,7 +50,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     } else if (user && isPublicRoute) {
       router.push('/');
     }
-  }, [user, loading, pathname, router]);
+  }, [user, loading, pathname, router, authTimeout]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,7 +89,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     }
   }
 
-  if (loading) {
+  if (loading && !authTimeout) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
         <div className="text-center">
@@ -84,6 +99,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Loading PhD Tracker Pro</h2>
           <p className="text-gray-600">Checking authentication...</p>
           <Loader2 className="h-6 w-6 animate-spin mx-auto mt-4 text-primary-500" />
+          {authTimeout && (
+            <p className="text-orange-600 text-sm mt-2">Taking longer than expected...</p>
+          )}
         </div>
       </div>
     );

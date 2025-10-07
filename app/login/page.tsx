@@ -3,27 +3,29 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { useUser } from "@/components/UserProvider"
 
 export default function LoginPage() {
+  const { signIn } = useUser()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError("")
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      alert(error.message)
-    } else {
+    try {
+      await signIn(email, password)
       router.push("/")
+    } catch (error: any) {
+      setError(error.message || "Failed to sign in")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (
@@ -67,6 +69,12 @@ export default function LoginPage() {
                 placeholder="Enter your password"
               />
             </div>
+
+            {error && (
+              <div className="text-red-600 text-sm text-center">
+                {error}
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">

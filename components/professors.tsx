@@ -9,21 +9,23 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
 import { useUser } from "@/components/UserProvider"
 import ProfessorForm from "@/components/forms/professor-form"
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Mail, 
-  Edit, 
-  Trash2, 
+import {
+  Users,
+  Search,
+  Plus,
+  Mail,
+  Edit,
+  Trash2,
   Calendar,
   MessageCircle,
   Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Wand2
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import EmailGenerator from "@/components/email-generator"
 
 const statusConfig = {
   "not-contacted": {
@@ -71,6 +73,8 @@ export default function ProfessorsPage() {
   const [openForm, setOpenForm] = useState(false)
   const [editingProfessor, setEditingProfessor] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [emailGeneratorOpen, setEmailGeneratorOpen] = useState(false)
+  const [selectedProfessor, setSelectedProfessor] = useState<any>(null)
 
   const fetchProfessors = async () => {
     if (!user?.id) {
@@ -129,6 +133,11 @@ export default function ProfessorsPage() {
     const subject = encodeURIComponent(`Graduate Research Opportunity`)
     const body = encodeURIComponent(`Dear Professor ${name},\n\nI hope this email finds you well.\n\nBest regards,`)
     window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank')
+  }
+
+  const openEmailGenerator = (professor: any) => {
+    setSelectedProfessor(professor)
+    setEmailGeneratorOpen(true)
   }
 
   const openEdit = (prof: any) => {
@@ -192,13 +201,25 @@ export default function ProfessorsPage() {
     // If user is undefined, we're still loading the auth state
   }, [user])
 
+  // Add timeout for loading state
+  useEffect(() => {
+    if (loading && user === undefined) {
+      const timeout = setTimeout(() => {
+        console.log('Professors page loading timeout - refreshing')
+        setLoading(false)
+      }, 8000) // 8 second timeout
+
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, user])
+
   useEffect(() => {
     filterAndSearch()
   }, [search, filter, professors])
 
   const stats = getStats()
 
-  if (loading) {
+  if (userLoading || (loading && user === undefined)) {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-center py-12">
@@ -406,30 +427,45 @@ export default function ProfessorsPage() {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => sendEmail(professor.email, professor.name)}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Mail className="h-4 w-4 mr-1" />
-                      Email
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEdit(professor)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(professor.id, professor.name)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2 pt-2">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => openEmailGenerator(professor)}
+                        className="flex-1 bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        AI Email
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendEmail(professor.email, professor.name)}
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        Quick Email
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEdit(professor)}
+                        className="flex-1"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(professor.id, professor.name)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -445,6 +481,18 @@ export default function ProfessorsPage() {
         editingProfessor={editingProfessor}
         refresh={fetchProfessors}
       />
+
+      {/* AI Email Generator Modal */}
+      {selectedProfessor && (
+        <EmailGenerator
+          open={emailGeneratorOpen}
+          onClose={() => {
+            setEmailGeneratorOpen(false)
+            setSelectedProfessor(null)
+          }}
+          professor={selectedProfessor}
+        />
+      )}
     </div>
   )
 }

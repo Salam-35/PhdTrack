@@ -3,41 +3,45 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { useUser } from "@/components/UserProvider"
 
 export default function SignupPage() {
+  const { signUp } = useUser()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const router = useRouter()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
+    setSuccess("")
 
     if (password !== confirmPassword) {
-      alert("Passwords don't match")
+      setError("Passwords don't match")
       return
     }
 
     if (!agreedToTerms) {
-      alert("Please agree to the terms and conditions")
+      setError("Please agree to the terms and conditions")
       return
     }
 
     setLoading(true)
 
-    const { error } = await supabase.auth.signUp({ email, password })
-
-    if (error) {
-      alert(error.message)
-    } else {
-      alert("Check your email for the confirmation link!")
-      router.push("/login")
+    try {
+      await signUp(email, password)
+      setSuccess("Account created! Please check your email to verify your account.")
+      setTimeout(() => router.push("/login"), 2000)
+    } catch (error: any) {
+      setError(error.message || "Failed to create account")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const getPasswordStrength = (password: string) => {
@@ -132,6 +136,18 @@ export default function SignupPage() {
                 <p className="mt-1 text-sm text-red-600">Passwords don't match</p>
               )}
             </div>
+
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="text-green-600 text-sm text-center bg-green-50 p-3 rounded-lg">
+                {success}
+              </div>
+            )}
 
             <div className="flex items-start">
               <input
