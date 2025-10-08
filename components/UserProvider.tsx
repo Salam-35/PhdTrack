@@ -115,21 +115,53 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const loadUserProfile = async (userId: string) => {
     try {
-      console.log('Loading profile for user:', userId)
+      console.log('🔄 Loading profile for user:', userId)
 
-      // Add a timeout to the profile loading
-      const profilePromise = db.getUserProfile(userId)
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile load timeout')), 5000)
-      )
+      // First check Supabase connection
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1)
 
-      const userProfile = await Promise.race([profilePromise, timeoutPromise]) as any
+      if (testError) {
+        console.error('❌ Supabase connection test failed:', testError)
+        throw new Error(`Supabase connection failed: ${testError.message}`)
+      }
+
+      console.log('✅ Supabase connection OK')
+
+      const userProfile = await db.getUserProfile(userId)
+
+      if (!userProfile) {
+        console.log('ℹ️ No profile found, creating default profile')
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const newProfile = await db.createDefaultProfile(authUser)
+          setProfile(newProfile)
+          console.log('✅ Default profile created:', newProfile)
+          return
+        }
+      }
+
       setProfile(userProfile)
-      console.log('Profile loaded:', userProfile ? 'Success' : 'Not found')
+      console.log('✅ Profile loaded successfully')
     } catch (error) {
-      console.error('Error loading user profile:', error)
-      // Still set profile to null, but don't fail the auth completely
-      setProfile(null)
+      console.error('❌ Error loading user profile:', error)
+      // Try to create a default profile if loading fails
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          console.log('🔄 Attempting to create default profile after error')
+          const newProfile = await db.createDefaultProfile(authUser)
+          setProfile(newProfile)
+          console.log('✅ Default profile created after error')
+        } else {
+          setProfile(null)
+        }
+      } catch (createError) {
+        console.error('❌ Error creating default profile:', createError)
+        setProfile(null)
+      }
     }
   }
 

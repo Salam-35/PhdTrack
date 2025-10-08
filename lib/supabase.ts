@@ -1,10 +1,29 @@
 
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("❌ Missing Supabase environment variables. Please check your .env file.")
+  console.error("NEXT_PUBLIC_SUPABASE_URL:", supabaseUrl ? "✓" : "✗")
+  console.error("NEXT_PUBLIC_SUPABASE_ANON_KEY:", supabaseAnonKey ? "✓" : "✗")
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'x-client-info': 'phdtrack-web'
+    }
+  }
+})
 
 // User Profile Interface
 export interface UserProfile {
@@ -65,6 +84,7 @@ export interface University {
   funding_available: boolean
   funding_types: string[]
   funding_amount?: string
+  acceptance_funding_status?: "with-funding" | "without-funding" | "pending" | "unknown"
   notes: string
   user_id: string // Add user_id to link to profiles
   created_at: string
@@ -139,19 +159,25 @@ export const db = {
   // User Profile Operations
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
+      console.log("🔍 Fetching profile for userId:", userId)
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single()
-      
+
       if (error) {
-        if (error.code === 'PGRST116') return null // No profile found
+        console.error("❌ Supabase error:", error.code, error.message, error.details, error.hint)
+        if (error.code === 'PGRST116') {
+          console.log("ℹ️ No profile found (PGRST116)")
+          return null // No profile found
+        }
         throw error
       }
+      console.log("✅ Profile fetched successfully:", data)
       return data as UserProfile
     } catch (error) {
-      console.error("Error fetching user profile:", error)
+      console.error("❌ Error fetching user profile:", error)
       return null
     }
   },

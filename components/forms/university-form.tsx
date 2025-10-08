@@ -40,6 +40,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
     funding_available: university?.funding_available || false,
     funding_types: university?.funding_types || [],
     funding_amount: university?.funding_amount || "",
+    acceptance_funding_status: university?.acceptance_funding_status || ("unknown" as const),
     notes: university?.notes || "",
   })
 
@@ -105,12 +106,18 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
     setLoading(true)
 
     try {
-      const universityData = {
+      // Prepare university data
+      const baseData = {
         ...formData,
         ranking: Number.parseInt(formData.ranking) || 0,
         application_fee: Number.parseFloat(formData.application_fee) || 0,
         sop_length: Number.parseInt(formData.sop_length) || 0,
       }
+
+      // Only include acceptance_funding_status if it's accepted (to avoid DB error if column doesn't exist yet)
+      const universityData = formData.status === "accepted"
+        ? baseData
+        : { ...baseData, acceptance_funding_status: undefined }
 
       let result: University
       if (university) {
@@ -288,6 +295,30 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                 </Select>
               </div>
             </div>
+
+            {/* Acceptance Funding Status - Only show when accepted */}
+            {formData.status === "accepted" && (
+              <div className="space-y-2">
+                <Label htmlFor="acceptance_funding_status">Acceptance Funding Status</Label>
+                <Select
+                  value={formData.acceptance_funding_status}
+                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, acceptance_funding_status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="with-funding">Accepted with Funding</SelectItem>
+                    <SelectItem value="without-funding">Accepted without Funding</SelectItem>
+                    <SelectItem value="pending">Funding Decision Pending</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  Specify whether you were accepted with or without funding
+                </p>
+              </div>
+            )}
 
             {/* GRE Requirements */}
             <div className="space-y-4">

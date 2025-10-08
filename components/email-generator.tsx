@@ -99,194 +99,146 @@ Abdus Salam`
 
 export default function EmailGenerator({ open, onClose, professor }: EmailGeneratorProps) {
   const [loading, setLoading] = useState(false)
-  const [researchLoading, setResearchLoading] = useState(false)
-  const [professorResearch, setProfessorResearch] = useState<string>('')
+  const [professorInfo, setProfessorInfo] = useState<string>('')
   const [customInstructions, setCustomInstructions] = useState('')
   const [generatedEmail, setGeneratedEmail] = useState<{subject: string, body: string} | null>(null)
 
-  const searchProfessorResearch = async () => {
-    setResearchLoading(true)
-    try {
-      const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-
-      if (!geminiApiKey) {
-        setProfessorResearch('Gemini API key not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your environment variables.')
-        setResearchLoading(false)
-        return
-      }
-
-      console.log('Starting research search for:', professor.name)
-
-      const modelName = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-2.5-pro-preview-03-25'
-      console.log('Using Gemini model:', modelName)
-
-      const prompt = `Based on the information provided about Professor ${professor.name} at ${professor.university}${professor.department ? ` in the ${professor.department}` : ''}, generate a research profile summary.
-
-Since I cannot search the web, please generate a plausible research profile for a computer science professor that would include:
-
-1. Main research areas (likely: computer vision, machine learning, AI, data science, or related fields)
-2. 2-3 specific research projects or focus areas
-3. Lab or research group name
-4. Potential connections to: medical imaging, computer vision, deep learning, healthcare AI
-
-Format as a 2-3 paragraph research summary that sounds realistic for a ${professor.department || 'Computer Science'} professor.
-
-Note: This is a generated profile to help create personalized emails. The actual professor's research should be verified from their official website.`
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000,
-          }
-        })
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Research API error: ${response.status}`, errorText)
-        throw new Error(`Research API error: ${response.status} - ${errorText}`)
-      }
-
-      const data = await response.json()
-      const researchInfo = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to fetch research information'
-      setProfessorResearch(researchInfo)
-
-    } catch (error: any) {
-      console.error('Research search error:', error)
-      const errorMessage = error.message || 'Unknown error occurred'
-      setProfessorResearch(`Error fetching research information: ${errorMessage}\n\nPlease add research information manually based on the professor's website or recent publications.`)
-    } finally {
-      setResearchLoading(false)
-    }
-  }
-
-  const generateEmail = async () => {
-    if (!professorResearch.trim()) {
-      alert('Please search for professor research information first')
-      return
-    }
-
+  const generateEmailWithOpenAI = async () => {
     setLoading(true)
-    try {
-      const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
+    setProfessorInfo('')
+    setGeneratedEmail(null)
 
-      if (!geminiApiKey) {
-        console.error('Gemini API key not configured')
-        alert('Gemini API key not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your environment variables.')
+    try {
+      const openaiApiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY
+
+      if (!openaiApiKey) {
+        alert('OpenAI API key not configured. Please add NEXT_PUBLIC_OPENAI_API_KEY to your environment variables.')
         setLoading(false)
         return
       }
 
-      console.log('Starting email generation for:', professor.name)
+      console.log('Starting email generation with OpenAI for:', professor.name)
 
-      const modelName = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-2.5-pro-preview-03-25'
-      console.log('Using Gemini model:', modelName)
+      // Step 1: Get professor info using professor name and email
+      const infoPrompt = `Based on the professor name "${professor.name}" and email "${professor.email}" at ${professor.university}${professor.department ? ` in the ${professor.department}` : ''}, provide:
 
-      const enhancedPrompt = `Generate a professional PhD application email.
+1. Research areas (computer vision, machine learning, AI, healthcare, etc.)
+2. 2-3 potential research projects or focus areas
+3. Lab or research group name (if identifiable from name/email)
+4. Connections to: medical imaging, computer vision, deep learning, healthcare AI
 
-Professor: ${professor.name} at ${professor.university}
-Student: Abdus Salam (MSc Computer Science, specializes in medical imaging and computer vision)
+Format as a brief 2-3 paragraph summary. Be realistic and professional.`
 
-Research areas to connect: ${professorResearch.substring(0, 500)}
-
-Create an email with:
-1. Professional subject line
-2. Brief introduction
-3. Connection between student's work and professor's research
-4. Request for PhD supervision
-
-Return ONLY valid JSON in this format:
-{
-  "subject": "PhD Application - Computer Vision Background",
-  "body": "Dear Professor [Name],\n\n[Email content here]\n\nBest regards,\nAbdus Salam"
-}
-
-${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
+      const infoResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: enhancedPrompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          }
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a research assistant helping to find information about professors based on their name and institutional affiliation.'
+            },
+            {
+              role: 'user',
+              content: infoPrompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
         })
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Email generation API error: ${response.status}`, errorText)
-        throw new Error(`Email generation API error: ${response.status} - ${errorText}`)
+      if (!infoResponse.ok) {
+        throw new Error(`OpenAI API error: ${infoResponse.status}`)
       }
 
-      const data = await response.json()
-      console.log('Full API response:', data)
+      const infoData = await infoResponse.json()
+      const professorInfoText = infoData.choices?.[0]?.message?.content || 'Unable to find professor information'
+      setProfessorInfo(professorInfoText)
 
-      let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      // Step 2: Generate email based on professor info
+      const emailPrompt = `Generate a professional PhD application email.
 
-      console.log('Raw API response:', responseText)
+Professor: ${professor.name} (${professor.email}) at ${professor.university}
+Student: Abdus Salam (MSc Computer Science, specializes in medical imaging and computer vision)
 
-      if (!responseText) {
-        console.error('Empty response from Gemini API. Full response:', data)
-        throw new Error('Received empty response from Gemini API. This might be due to content filtering or model issues.')
+Professor's Research Profile:
+${professorInfoText}
+
+Student Background:
+${cvContext}
+
+Create a personalized email with:
+1. Professional subject line
+2. Brief introduction mentioning the Spring 2026 application
+3. Specific connection between student's work and professor's research
+4. Request for supervision
+
+${customInstructions ? `Additional notes: ${customInstructions}` : ''}
+
+Return ONLY valid JSON:
+{
+  "subject": "PhD Application - Spring 2026",
+  "body": "Email content here"
+}`
+
+      const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert at writing professional academic emails for PhD applications.'
+            },
+            {
+              role: 'user',
+              content: emailPrompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1500
+        })
+      })
+
+      if (!emailResponse.ok) {
+        throw new Error(`OpenAI API error: ${emailResponse.status}`)
       }
+
+      const emailData = await emailResponse.json()
+      let responseText = emailData.choices?.[0]?.message?.content || ''
 
       // Clean up markdown formatting
       responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
 
-      console.log('Cleaned response:', responseText)
-
       try {
-        const emailData = JSON.parse(responseText)
-        console.log('Parsed email data:', emailData)
+        const parsed = JSON.parse(responseText)
         setGeneratedEmail({
-          subject: emailData.subject || 'PhD Application - Research Inquiry',
-          body: emailData.body || emailData.content || responseText
+          subject: parsed.subject || 'PhD Application - Spring 2026',
+          body: parsed.body || responseText
         })
       } catch (parseError) {
-        console.log('JSON parse failed, trying manual extraction. Error:', parseError)
-        // If not valid JSON, try to extract subject and body manually
+        // Fallback parsing
         const lines = responseText.split('\n')
         const subjectLine = lines.find(l => l.toLowerCase().includes('subject'))
-        const subject = subjectLine
-          ? subjectLine.replace(/.*subject[:\s]*/i, '').replace(/['"]/g, '').trim()
-          : 'PhD Application - Research Inquiry'
-
-        // Try to extract body after subject line
+        const subject = subjectLine?.replace(/.*subject[:\s]*/i, '').replace(/['"]/g, '').trim() || 'PhD Application - Spring 2026'
         const subjectIndex = lines.findIndex(l => l.toLowerCase().includes('subject'))
-        const bodyLines = subjectIndex >= 0 ? lines.slice(subjectIndex + 1) : lines
-        const body = bodyLines.join('\n').trim() || responseText
+        const body = (subjectIndex >= 0 ? lines.slice(subjectIndex + 1) : lines).join('\n').trim() || responseText
 
-        console.log('Manual extraction - Subject:', subject, 'Body:', body)
-
-        setGeneratedEmail({
-          subject,
-          body
-        })
+        setGeneratedEmail({ subject, body })
       }
 
     } catch (error: any) {
       console.error('Email generation error:', error)
-      const errorMessage = error.message || 'Unknown error occurred'
-      alert(`Failed to generate email: ${errorMessage}. Please try again or check your API configuration.`)
+      alert(`Failed to generate email: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -307,7 +259,7 @@ ${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
     window.open(`mailto:${professor.email}?subject=${subject}&body=${body}`, '_blank')
   }
 
-  const availableProviders = aiService.getAvailableProviders()
+  const hasOpenAI = !!process.env.NEXT_PUBLIC_OPENAI_API_KEY
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -318,84 +270,49 @@ ${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
             AI Email Generator
           </DialogTitle>
           <DialogDescription>
-            Generate personalized academic emails for PhD applications using AI research discovery and professional templates.
+            Generate personalized academic emails for PhD applications using AI.
           </DialogDescription>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">
-              Professor: {professor.name} • {professor.university}
+              Professor: {professor.name} • {professor.email}
             </span>
-            {availableProviders.length > 0 && (
+            {hasOpenAI && (
               <Badge variant="outline" className="text-green-600 border-green-200">
                 <Sparkles className="h-3 w-3 mr-1" />
-                {availableProviders.join(', ')} Available
+                OpenAI Available
               </Badge>
             )}
           </div>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Research Discovery Panel */}
+          {/* Left Panel */}
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Step 1: Discover Professor's Research</CardTitle>
+                <CardTitle className="text-lg">Generate Email</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    AI will generate a research profile based on the professor's department and university. Please verify and edit the information before generating the email.
+                    AI will find professor information using their name and email, then generate a personalized email.
                   </p>
                 </div>
 
-                {availableProviders.length === 0 && (
+                {!hasOpenAI && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <div className="flex items-center gap-2 text-yellow-800">
                       <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm font-medium">AI Not Configured</span>
+                      <span className="text-sm font-medium">OpenAI Not Configured</span>
                     </div>
                     <p className="text-xs text-yellow-700 mt-1">
-                      Add NEXT_PUBLIC_GEMINI_API_KEY or NEXT_PUBLIC_OPENAI_API_KEY to enable AI
+                      Add NEXT_PUBLIC_OPENAI_API_KEY to enable AI
                     </p>
                   </div>
                 )}
 
-                <Button
-                  onClick={searchProfessorResearch}
-                  disabled={researchLoading || availableProviders.length === 0}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {researchLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4 mr-2" />
-                  )}
-                  {researchLoading ? 'Generating...' : 'Generate Research Profile'}
-                </Button>
-
-                {professorResearch && (
-                  <div className="space-y-2">
-                    <Label>Research Information Found:</Label>
-                    <Textarea
-                      value={professorResearch}
-                      onChange={(e) => setProfessorResearch(e.target.value)}
-                      rows={8}
-                      className="text-sm"
-                    />
-                    <p className="text-xs text-gray-500">
-                      You can edit this information before generating the email
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Step 2: Customize (Optional)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Additional Instructions</Label>
+                  <Label>Additional Instructions (Optional)</Label>
                   <Textarea
                     placeholder="e.g., Mention specific deadline, emphasize keypoint detection experience, reference particular paper..."
                     value={customInstructions}
@@ -405,8 +322,8 @@ ${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
                 </div>
 
                 <Button
-                  onClick={generateEmail}
-                  disabled={loading || !professorResearch || availableProviders.length === 0}
+                  onClick={generateEmailWithOpenAI}
+                  disabled={loading || !hasOpenAI}
                   className="w-full bg-purple-600 hover:bg-purple-700"
                 >
                   {loading ? (
@@ -414,10 +331,23 @@ ${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
                   ) : (
                     <Sparkles className="h-4 w-4 mr-2" />
                   )}
-                  {loading ? 'Generating...' : 'Generate Personalized Email'}
+                  {loading ? 'Generating Email...' : 'Generate Email'}
                 </Button>
               </CardContent>
             </Card>
+
+            {professorInfo && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Professor Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-50 rounded-lg p-4 border">
+                    <pre className="text-sm whitespace-pre-wrap font-sans">{professorInfo}</pre>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Generated Email Panel */}
@@ -433,7 +363,7 @@ ${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={generateEmail}
+                      onClick={generateEmailWithOpenAI}
                       disabled={loading}
                     >
                       <RefreshCw className="h-4 w-4 mr-1" />
@@ -505,7 +435,7 @@ ${customInstructions ? `Additional notes: ${customInstructions}` : ''}`
                   <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Generate</h3>
                   <p className="text-gray-500 max-w-sm mx-auto">
-                    First, search for the professor's research to find meaningful connections with your background. Then generate a personalized email.
+                    Click "Generate Email" to create a personalized PhD application email using AI.
                   </p>
                 </CardContent>
               </Card>
