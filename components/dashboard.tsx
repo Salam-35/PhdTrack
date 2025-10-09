@@ -14,11 +14,30 @@ import {
   GraduationCap,
   Users,
   FileText,
-  DollarSign,
+  DollarSign
 } from "lucide-react"
 
-export default function Dashboard() {
-  // Fixed: Get user from context properly
+interface DashboardProps {
+  universities: any[]
+  professors: any[]
+  documents: any[]
+  timelineEvents: any[]
+  setUniversities: (unis: any[]) => void
+  setProfessors: (profs: any[]) => void
+  setDocuments: (docs: any[]) => void
+  setTimelineEvents: (events: any[]) => void
+  searchQuery?: string
+  onEditUniversity?: (university: any) => void
+}
+
+export default function Dashboard({
+  universities: propUniversities,
+  professors: propProfessors,
+  documents: propDocuments,
+  timelineEvents: propTimelineEvents,
+  searchQuery,
+  onEditUniversity
+}: DashboardProps) {
   const { user, loading: userLoading } = useUser()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -30,9 +49,11 @@ export default function Dashboard() {
     inProgress: 0,
     notStarted: 0,
   })
-  const [sortedUniversities, setSortedUniversities] = useState<any[]>([])
+  const [acceptedUniversities, setAcceptedUniversities] = useState<any[]>([])
+  const [contactedProfessors, setContactedProfessors] = useState<any[]>([])
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  // Remove local university edit state since we'll use parent state
 
   useEffect(() => {
     // Fixed: Check for user properly
@@ -42,14 +63,11 @@ export default function Dashboard() {
       setLoading(true)
 
       try {
-        // Fixed: Use user_id instead of added_by
-        const [{ data: universities }, { data: professors }, { data: documents }, { data: events }] =
-          await Promise.all([
-            supabase.from("universities").select("*").eq("user_id", user.id),
-            supabase.from("professors").select("*").eq("user_id", user.id),
-            supabase.from("documents").select("*").eq("user_id", user.id),
-            supabase.from("timeline_events").select("*").eq("user_id", user.id),
-          ])
+        // Use passed props instead of fetching again
+        const universities = propUniversities
+        const professors = propProfessors
+        const documents = propDocuments
+        const events = propTimelineEvents
 
         // Calculate stats - Fixed: Include all submitted and above statuses in spending
         const totalSpent =
@@ -64,35 +82,37 @@ export default function Dashboard() {
             )
             .reduce((sum, u) => sum + (Number(u.application_fee) || 0), 0) ?? 0
 
-        const submitted = universities?.filter(u => u.status === "submitted").length ?? 0
+        // Fix university status logic: submitted includes all that have been submitted or beyond
+        const submitted = universities?.filter(u =>
+          u.status === "submitted" ||
+          u.status === "under-review" ||
+          u.status === "interview" ||
+          u.status === "accepted" ||
+          u.status === "rejected" ||
+          u.status === "waitlisted"
+        ).length ?? 0
+
         const inProgress = universities?.filter(u => u.status === "in-progress").length ?? 0
         const notStarted = universities?.filter(u => u.status === "not-started").length ?? 0
 
-        const contacted = professors?.filter(p => p.contact_status !== "not-contacted").length ?? 0
+        // Fix professor stats: if professor is added, they are contacted
+        const contacted = professors?.length ?? 0
 
-        // Sort universities by priority
-        const getStatusPriority = (uni: any) => {
-          if (uni.status === "accepted" && uni.acceptance_funding_status === "with-funding") return 1
-          if (uni.status === "accepted" && uni.acceptance_funding_status === "without-funding") return 2
-          if (uni.status === "accepted") return 3 // unknown funding
-          if (uni.status === "interview") return 4
-          if (uni.status === "waitlisted") return 5
-          if (uni.status === "under-review") return 6
-          if (uni.status === "submitted") return 7
-          if (uni.status === "in-progress") return 8
-          if (uni.status === "rejected") return 9
-          if (uni.status === "not-started") return 10
-          return 11
-        }
-
-        const sorted = [...(universities || [])].sort((a, b) => {
-          const priorityDiff = getStatusPriority(a) - getStatusPriority(b)
-          if (priorityDiff !== 0) return priorityDiff
-          // Secondary sort by deadline (earlier first)
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+        // Filter for accepted universities and sort by funding status
+        const accepted = universities?.filter(uni => uni.status === "accepted") || []
+        const sortedAccepted = accepted.sort((a, b) => {
+          if (a.acceptance_funding_status === "with-funding" && b.acceptance_funding_status !== "with-funding") return -1
+          if (b.acceptance_funding_status === "with-funding" && a.acceptance_funding_status !== "with-funding") return 1
+          return 0
         })
+        setAcceptedUniversities(sortedAccepted)
 
-        setSortedUniversities(sorted)
+        // Filter professors with meaningful contact status - only meeting-scheduled and replied
+        const activeProfessors = professors?.filter(prof =>
+          prof.contact_status === "meeting-scheduled" ||
+          prof.contact_status === "replied"
+        ) || []
+        setContactedProfessors(activeProfessors)
 
         setStats({
           totalApplications: universities?.length ?? 0,
@@ -126,7 +146,7 @@ export default function Dashboard() {
     }
 
     fetchData()
-  }, [user?.id]) // Fixed: Updated dependency
+  }, [user?.id, propUniversities, propProfessors, propDocuments, propTimelineEvents])
 
   // Fixed: Handle loading states
   if (userLoading || loading) return <div className="p-4">Loading...</div>
@@ -145,25 +165,64 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Stats Grid */}
+    <div className="p-4 space-y-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+      {/* Welcome Section */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <p className="text-sm text-blue-800">
+            🔍 Searching for: <span className="font-semibold">"{searchQuery}"</span>
+          </p>
+        </div>
+      )}
+
+      {/* Stats Grid - Enhanced */}
       <div className="grid grid-cols-2 gap-4">
         {[
-          { label: "Total Applications", value: stats.totalApplications, icon: GraduationCap, color: "bg-blue-500" },
-          { label: "Professors Contacted", value: stats.professorsContacted, icon: Users, color: "bg-green-500" },
-          { label: "Documents Ready", value: stats.documentsReady, icon: FileText, color: "bg-purple-500" },
-          { label: "Total Spent", value: `$${stats.totalSpent}`, icon: DollarSign, color: "bg-orange-500" },
+          {
+            label: "Total Applications",
+            value: stats.totalApplications,
+            icon: GraduationCap,
+            gradient: "from-blue-500 to-blue-600",
+            bgLight: "bg-blue-50",
+            textColor: "text-blue-600"
+          },
+          {
+            label: "Professors Contacted",
+            value: stats.professorsContacted,
+            icon: Users,
+            gradient: "from-green-500 to-green-600",
+            bgLight: "bg-green-50",
+            textColor: "text-green-600"
+          },
+          {
+            label: "Documents Ready",
+            value: stats.documentsReady,
+            icon: FileText,
+            gradient: "from-purple-500 to-purple-600",
+            bgLight: "bg-purple-50",
+            textColor: "text-purple-600"
+          },
+          {
+            label: "Total Spent",
+            value: `$${stats.totalSpent}`,
+            icon: DollarSign,
+            gradient: "from-orange-500 to-orange-600",
+            bgLight: "bg-orange-50",
+            textColor: "text-orange-600"
+          },
         ].map((stat, i) => {
           const Icon = stat.icon
           return (
-            <Card key={i}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </div>
-                <div className={`${stat.color} p-3 rounded-full`}>
-                  <Icon className="h-6 w-6 text-white" />
+            <Card key={i} className={`${stat.bgLight} border-0 shadow-lg hover:shadow-xl transition-all duration-300`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
+                    <p className={`text-2xl font-bold ${stat.textColor}`}>{stat.value}</p>
+                  </div>
+                  <div className={`bg-gradient-to-br ${stat.gradient} p-3 rounded-xl shadow-lg`}>
+                    <Icon className="h-6 w-6 text-white" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -171,91 +230,205 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Application Progress */}
-      <Card>
+      {/* Application Progress - Enhanced */}
+      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5 text-primary-500" />
-            <span>Application Progress</span>
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-2 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-gray-800">Application Progress</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Progress value={(stats.submitted / stats.totalApplications) * 100 || 0} />
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-green-500">{stats.submitted}</div>
-              <div className="text-xs text-gray-500">Submitted</div>
+        <CardContent className="space-y-6">
+          <div className="relative">
+            <Progress
+              value={(stats.submitted / stats.totalApplications) * 100 || 0}
+              className="h-3 bg-gray-200"
+            />
+            <div className="absolute -top-6 right-0 text-sm font-semibold text-indigo-600">
+              {Math.round((stats.submitted / stats.totalApplications) * 100) || 0}% Complete
             </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-500">{stats.inProgress}</div>
-              <div className="text-xs text-gray-500">In Progress</div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+              <div className="text-3xl font-bold text-green-600 mb-1">{stats.submitted}</div>
+              <div className="text-xs text-gray-600 font-medium">✅ Submitted</div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-400">{stats.notStarted}</div>
-              <div className="text-xs text-gray-500">Not Started</div>
+            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+              <div className="text-3xl font-bold text-blue-600 mb-1">{stats.inProgress}</div>
+              <div className="text-xs text-gray-600 font-medium">🛠️ In Progress</div>
+            </div>
+            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+              <div className="text-3xl font-bold text-gray-400 mb-1">{stats.notStarted}</div>
+              <div className="text-xs text-gray-600 font-medium">⏳ Not Started</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* University Applications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <GraduationCap className="h-5 w-5 text-primary-500" />
-            <span>Universities</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {sortedUniversities.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500">No universities added yet</p>
-            </div>
-          ) : (
-            sortedUniversities.map((uni, i) => {
-              const getStatusBadgeColor = (status: string, fundingStatus?: string) => {
-                if (status === "accepted" && fundingStatus === "with-funding") return "bg-green-600"
-                if (status === "accepted" && fundingStatus === "without-funding") return "bg-green-400"
-                if (status === "accepted") return "bg-green-500"
-                if (status === "interview") return "bg-orange-500"
-                if (status === "waitlisted") return "bg-yellow-600"
-                if (status === "under-review") return "bg-purple-500"
-                if (status === "submitted") return "bg-yellow-500"
-                if (status === "in-progress") return "bg-blue-500"
-                if (status === "rejected") return "bg-red-500"
-                return "bg-gray-400"
-              }
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Accepted Universities Box */}
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-3 rounded-xl shadow-lg">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Accepted Universities</h3>
+                  <p className="text-xs text-gray-600">Your successful applications</p>
+                </div>
+              </div>
+              {acceptedUniversities.length > 0 && (
+                <Badge className="bg-green-600 text-white px-3 py-1 text-sm font-semibold">
+                  {acceptedUniversities.length}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+            {acceptedUniversities.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="bg-green-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <GraduationCap className="h-10 w-10 text-green-600" />
+                </div>
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">No Acceptances Yet</h4>
+                <p className="text-sm text-gray-500">Keep working on your applications!</p>
+                <p className="text-xs text-gray-400 mt-1">Your hard work will pay off 🚀</p>
+              </div>
+            ) : (
+              acceptedUniversities.map((uni, i) => {
+                const getFundingBadge = (fundingStatus?: string) => {
+                  if (fundingStatus === "with-funding") return "bg-green-600 text-white shadow-lg"
+                  if (fundingStatus === "without-funding") return "bg-orange-500 text-white shadow-lg"
+                  return "bg-blue-500 text-white shadow-lg"
+                }
 
-              const getStatusLabel = (status: string, fundingStatus?: string) => {
-                if (status === "accepted" && fundingStatus === "with-funding") return "Accepted (Funded)"
-                if (status === "accepted" && fundingStatus === "without-funding") return "Accepted (No Funding)"
-                if (status === "accepted") return "Accepted"
-                return status.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
-              }
+                const getFundingLabel = (fundingStatus?: string) => {
+                  if (fundingStatus === "with-funding") return "🎉 Funded"
+                  if (fundingStatus === "without-funding") return "💰 Self-Funded"
+                  return "❓ Status Unknown"
+                }
 
-              return (
-                <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{uni.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{uni.program}</p>
-                    {uni.application_fee && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        <DollarSign className="h-3 w-3 inline mr-1" />
-                        ${uni.application_fee}
-                      </p>
+                return (
+                  <div
+                    key={i}
+                    onClick={() => onEditUniversity?.(uni)}
+                    className="p-5 bg-white border border-green-300 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.03] group"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 truncate text-lg group-hover:text-green-700 transition-colors">
+                          {uni.name}
+                        </h4>
+                        <p className="text-sm text-gray-600 truncate mt-1 font-medium">{uni.program}</p>
+                      </div>
+                      <Badge className={`${getFundingBadge(uni.acceptance_funding_status)} text-xs font-bold px-3 py-1`}>
+                        {getFundingLabel(uni.acceptance_funding_status)}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      {uni.deadline && (
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span>Deadline: {new Date(uni.deadline).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      <div className="text-xs text-green-600 font-semibold group-hover:text-green-700">
+                        Click to edit ✎️
+                      </div>
+                    </div>
+
+                    {uni.notes && (
+                      <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-xs text-gray-700 italic">
+                          "{uni.notes.length > 100 ? uni.notes.substring(0, 100) + '...' : uni.notes}"
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <Badge
-                    className={`${getStatusBadgeColor(uni.status, uni.acceptance_funding_status)} text-white text-xs whitespace-nowrap ml-2`}
-                  >
-                    {getStatusLabel(uni.status, uni.acceptance_funding_status)}
-                  </Badge>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Professor Contacts Box */}
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-3 rounded-xl shadow-lg">
+                  <Users className="h-6 w-6 text-white" />
                 </div>
-              )
-            })
-          )}
-        </CardContent>
-      </Card>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Professor Contacts</h3>
+                  <p className="text-xs text-gray-600">Active communications</p>
+                </div>
+              </div>
+              {contactedProfessors.length > 0 && (
+                <Badge className="bg-blue-600 text-white px-3 py-1 text-sm font-semibold">
+                  {contactedProfessors.length}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+            {contactedProfessors.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="bg-blue-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <Users className="h-10 w-10 text-blue-600" />
+                </div>
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">No Active Contacts</h4>
+                <p className="text-sm text-gray-500">Start reaching out to professors!</p>
+                <p className="text-xs text-gray-400 mt-1">Building connections is key 🤝</p>
+              </div>
+            ) : (
+              contactedProfessors.map((prof, i) => {
+                const getContactBadge = (status: string) => {
+                  if (status === "meeting-scheduled") return "bg-green-500 text-white shadow-lg"
+                  if (status === "replied") return "bg-blue-500 text-white shadow-lg"
+                  return "bg-gray-400 text-white shadow-lg"
+                }
+
+                const getContactLabel = (status: string) => {
+                  if (status === "meeting-scheduled") return "🗓️ Meeting Scheduled"
+                  if (status === "replied") return "💬 Professor Replied"
+                  return status
+                }
+
+                return (
+                  <div key={i} className="p-4 bg-white border border-blue-300 rounded-xl hover:shadow-lg transition-all duration-300 group">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors">
+                          {prof.name}
+                        </h4>
+                        <p className="text-sm text-gray-600 truncate font-medium">{prof.university}</p>
+                        <p className="text-xs text-gray-500 mt-1">{prof.department}</p>
+                      </div>
+                      <Badge className={`${getContactBadge(prof.contact_status)} text-xs font-bold px-3 py-1`}>
+                        {getContactLabel(prof.contact_status)}
+                      </Badge>
+                    </div>
+
+                    {prof.last_contact && (
+                      <div className="text-xs text-gray-500 mt-2 flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Last contact: {new Date(prof.last_contact).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Upcoming Tasks */}
       <Card>
@@ -312,6 +485,8 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* University edit will be handled by parent component */}
     </div>
   )
 }

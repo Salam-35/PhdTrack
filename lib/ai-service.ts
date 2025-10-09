@@ -152,15 +152,20 @@ class AIService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [
+          {
+            role: 'system',
+            content: 'You are an expert academic email writer. Write professional, personalized PhD application emails.'
+          },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 800,
-        temperature: 0.7
+        max_tokens: 1200,
+        temperature: 0.6,
+        presence_penalty: 0.1
       })
     })
 
@@ -225,27 +230,30 @@ class AIService {
       thank_you: 'a thank you note after a meeting or conversation'
     }
 
-    return `Generate a professional academic email for ${emailTypeDescriptions[emailType]}.
+    return `Generate a highly personalized academic email for ${emailTypeDescriptions[emailType]}.
 
-Email Details:
-- To: Professor ${professorName} at ${professorUniversity}${professorDepartment ? ` (${professorDepartment})` : ''}
-- From: ${studentName}, ${studentDegree} student at ${studentUniversity}
-- Type: ${emailType}
-${researchInterests ? `- Research interests: ${researchInterests}` : ''}
-${customInstructions ? `- Special instructions: ${customInstructions}` : ''}
+## CONTEXT
+**Professor:** ${professorName}
+**University:** ${professorUniversity}${professorDepartment ? ` (${professorDepartment})` : ''}
+**Student:** ${studentName} (${studentDegree} at ${studentUniversity})
+**Email Type:** ${emailType}
+${researchInterests ? `**Research Focus:** ${researchInterests}` : ''}
+${customInstructions ? `**Special Instructions:** ${customInstructions}` : ''}
 
-Requirements:
-1. Professional and respectful tone
-2. Concise but informative (200-300 words)
-3. Clear subject line
-4. Specific to the professor's research area when possible
-5. Include relevant background about the student
-6. End with appropriate call to action
+## REQUIREMENTS
+1. **Subject Line:** Specific and engaging (avoid generic terms)
+2. **Opening:** Reference professor's specific work or recent publications
+3. **Connection:** Clear link between student background and professor's research
+4. **Value Proposition:** What unique perspective student brings
+5. **Tone:** Professional yet personable, showing genuine research interest
+6. **Length:** 150-250 words, focused and impactful
+7. **Closing:** Specific call to action appropriate for email type
 
-Return the response in this exact format:
-Subject: [email subject]
+## OUTPUT FORMAT
+Return response in this exact format:
+Subject: [specific, engaging subject line]
 
-[email body]`
+[complete email body with proper academic formatting]`
   }
 
   private parseEmailResponse(response: string): EmailGenerationResult {

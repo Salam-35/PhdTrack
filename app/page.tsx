@@ -60,7 +60,13 @@ export default function PhDTrackerPro() {
   const { user, profile, signOut, loading: userLoading } = useUser()
   const [activeTab, setActiveTab] = useState("dashboard")
   const [searchQuery, setSearchQuery] = useState("")
+  const [filteredData, setFilteredData] = useState({
+    universities: [] as University[],
+    professors: [] as Professor[],
+    documents: [] as Document[]
+  })
   const [showUniversityForm, setShowUniversityForm] = useState(false)
+  const [editingUniversity, setEditingUniversity] = useState<University | undefined>()
   const [showProfessorForm, setShowProfessorForm] = useState(false)
   const [showDocumentForm, setShowDocumentForm] = useState(false)
   const [showTimelineForm, setShowTimelineForm] = useState(false)
@@ -79,6 +85,48 @@ export default function PhDTrackerPro() {
       loadData()
     }
   }, [user?.id, userLoading])
+
+  // Filter data based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredData({
+        universities,
+        professors,
+        documents
+      })
+      return
+    }
+
+    const query = searchQuery.toLowerCase()
+
+    const filteredUniversities = universities.filter(uni =>
+      uni.name.toLowerCase().includes(query) ||
+      uni.program?.toLowerCase().includes(query) ||
+      uni.status.toLowerCase().includes(query) ||
+      uni.notes?.toLowerCase().includes(query)
+    )
+
+    const filteredProfessors = professors.filter(prof =>
+      prof.name.toLowerCase().includes(query) ||
+      prof.email?.toLowerCase().includes(query) ||
+      prof.department?.toLowerCase().includes(query) ||
+      prof.university?.toLowerCase().includes(query) ||
+      prof.contact_status?.toLowerCase().includes(query) ||
+      prof.research_interests?.toLowerCase().includes(query)
+    )
+
+    const filteredDocuments = documents.filter(doc =>
+      doc.name.toLowerCase().includes(query) ||
+      doc.type?.toLowerCase().includes(query) ||
+      doc.status?.toLowerCase().includes(query)
+    )
+
+    setFilteredData({
+      universities: filteredUniversities,
+      professors: filteredProfessors,
+      documents: filteredDocuments
+    })
+  }, [searchQuery, universities, professors, documents])
 
   const loadData = async () => {
     if (!user?.id) return
@@ -128,7 +176,19 @@ export default function PhDTrackerPro() {
   }
 
   const handleAddUniversity = (university: University) => {
-    setUniversities((prev) => [university, ...prev])
+    if (editingUniversity) {
+      // Update existing university
+      setUniversities((prev) => prev.map(uni => uni.id === university.id ? university : uni))
+      setEditingUniversity(undefined)
+    } else {
+      // Add new university
+      setUniversities((prev) => [university, ...prev])
+    }
+  }
+
+  const handleEditUniversity = (university: University) => {
+    setEditingUniversity(university)
+    setShowUniversityForm(true)
   }
 
   const handleAddProfessor = (professor: Professor) => {
@@ -199,14 +259,16 @@ export default function PhDTrackerPro() {
 
   const renderContent = () => {
     const props = {
-      universities,
-      professors,
-      documents,
+      universities: searchQuery.trim() ? filteredData.universities : universities,
+      professors: searchQuery.trim() ? filteredData.professors : professors,
+      documents: searchQuery.trim() ? filteredData.documents : documents,
       timelineEvents,
       setUniversities,
       setProfessors,
       setDocuments,
       setTimelineEvents,
+      searchQuery,
+      onEditUniversity: handleEditUniversity
     }
 
     switch (activeTab) {
@@ -379,7 +441,14 @@ export default function PhDTrackerPro() {
 
       {/* Forms */}
       {showUniversityForm && (
-        <UniversityForm onClose={() => setShowUniversityForm(false)} onSave={handleAddUniversity} />
+        <UniversityForm
+          onClose={() => {
+            setShowUniversityForm(false)
+            setEditingUniversity(undefined)
+          }}
+          onSave={handleAddUniversity}
+          university={editingUniversity}
+        />
       )}
 
       {showProfessorForm && (

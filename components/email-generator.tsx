@@ -16,10 +16,9 @@ import {
   Sparkles,
   RefreshCw,
   CheckCircle,
-  AlertCircle,
-  Search
+  AlertCircle
 } from "lucide-react"
-import { aiService } from "@/lib/ai-service"
+import type { ProfessorInsights } from "@/lib/google-search"
 
 interface EmailGeneratorProps {
   open: boolean
@@ -97,15 +96,61 @@ I'm very excited about your projects, and it would be great to work under your s
 Best regards,
 Abdus Salam`
 
+const buildProfessorProfileText = (
+  insights: ProfessorInsights | null,
+  professor: EmailGeneratorProps['professor'],
+  fallbackMessage?: string
+) => {
+  const lines: string[] = [
+    `Professor: ${professor.name} (${professor.email}) at ${professor.university}${professor.department ? `, ${professor.department}` : ''}`
+  ]
+
+  if (professor.notes) {
+    lines.push(`Existing notes: ${professor.notes}`)
+  }
+
+  if (insights) {
+    if (insights.summary) {
+      lines.push(`Summary: ${insights.summary}`)
+    }
+
+    if (insights.labName) {
+      lines.push(`Lab: ${insights.labName}${insights.labWebsite ? ` (${insights.labWebsite})` : ''}`)
+    }
+
+    if (insights.personalWebsite) {
+      lines.push(`Personal website: ${insights.personalWebsite}`)
+    }
+
+    if (insights.relatedLinks.length > 0) {
+      const links = insights.relatedLinks
+        .map((link) => `- ${link.title}${link.url ? ` (${link.url})` : ''}${link.snippet ? ` — ${link.snippet}` : ''}`)
+        .join('\n')
+      lines.push(`Notable links:\n${links}`)
+    }
+
+    if (insights.notes) {
+      lines.push(`Google notes: ${insights.notes}`)
+    }
+  } else if (fallbackMessage) {
+    lines.push(`Google search notes: ${fallbackMessage}`)
+  }
+
+  return lines.join('\n')
+}
+
 export default function EmailGenerator({ open, onClose, professor }: EmailGeneratorProps) {
   const [loading, setLoading] = useState(false)
-  const [professorInfo, setProfessorInfo] = useState<string>('')
+  const [professorInsights, setProfessorInsights] = useState<ProfessorInsights | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [customInstructions, setCustomInstructions] = useState('')
+  const [manualResearchInfo, setManualResearchInfo] = useState('')
   const [generatedEmail, setGeneratedEmail] = useState<{subject: string, body: string} | null>(null)
 
   const generateEmailWithOpenAI = async () => {
     setLoading(true)
-    setProfessorInfo('')
+    setProfessorInsights(null)
+    setInfoMessage(null)
     setGeneratedEmail(null)
 
     try {
@@ -119,72 +164,95 @@ export default function EmailGenerator({ open, onClose, professor }: EmailGenera
 
       console.log('Starting email generation with OpenAI for:', professor.name)
 
-      // Step 1: Get professor info using professor name and email
-      const infoPrompt = `Based on the professor name "${professor.name}" and email "${professor.email}" at ${professor.university}${professor.department ? ` in the ${professor.department}` : ''}, provide:
+      let professorProfileText = ''
 
-1. Research areas (computer vision, machine learning, AI, healthcare, etc.)
-2. 2-3 potential research projects or focus areas
-3. Lab or research group name (if identifiable from name/email)
-4. Connections to: medical imaging, computer vision, deep learning, healthcare AI
-
-Format as a brief 2-3 paragraph summary. Be realistic and professional.`
-
-      const infoResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiApiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a research assistant helping to find information about professors based on their name and institutional affiliation.'
-            },
-            {
-              role: 'user',
-              content: infoPrompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 500
+      try {
+        const infoResponse = await fetch('/api/professor-info', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: professor.name,
+            email: professor.email,
+            university: professor.university,
+            department: professor.department,
+          }),
         })
-      })
 
-      if (!infoResponse.ok) {
-        throw new Error(`OpenAI API error: ${infoResponse.status}`)
+        if (!infoResponse.ok) {
+          throw new Error(`Professor info lookup failed (${infoResponse.status})`)
+        }
+
+        const infoData = await infoResponse.json()
+
+        if (infoData.success && infoData.insights) {
+          const insights = infoData.insights as ProfessorInsights
+          setProfessorInsights(insights)
+          if (insights.notes) {
+            setInfoMessage(insights.notes)
+          } else if (insights.summary) {
+            setInfoMessage('Google search results retrieved successfully.')
+          } else {
+            setInfoMessage('Google search returned limited details; see links below.')
+          }
+          professorProfileText = buildProfessorProfileText(insights, professor, insights.notes ?? undefined)
+        } else {
+          const fallbackMessage = infoData.error || 'No professor information found via Google search.'
+          setInfoMessage(fallbackMessage)
+          setProfessorInsights(null)
+          professorProfileText = buildProfessorProfileText(null, professor, fallbackMessage)
+        }
+      } catch (error) {
+        const fallbackMessage = error instanceof Error ? error.message : 'Professor information lookup failed.'
+        setInfoMessage(fallbackMessage)
+        setProfessorInsights(null)
+        professorProfileText = buildProfessorProfileText(null, professor, fallbackMessage)
       }
 
-      const infoData = await infoResponse.json()
-      const professorInfoText = infoData.choices?.[0]?.message?.content || 'Unable to find professor information'
-      setProfessorInfo(professorInfoText)
-
       // Step 2: Generate email based on professor info
-      const emailPrompt = `Generate a professional PhD application email.
+      const emailPrompt = `Generate a highly personalized PhD application email based on the detailed research profile.
 
-Professor: ${professor.name} (${professor.email}) at ${professor.university}
-Student: Abdus Salam (MSc Computer Science, specializes in medical imaging and computer vision)
+## EMAIL CONTEXT
+**Professor:** ${professor.name} (${professor.email})
+**University:** ${professor.university}
+**Department:** ${professor.department || 'Not specified'}
 
-Professor's Research Profile:
-${professorInfoText}
+**Student:** Abdus Salam
+**Target Program:** PhD in Computer Science - Spring 2026
+**Specialization:** Medical Imaging, Computer Vision, AI in Healthcare
 
-Student Background:
+## PROFESSOR'S RESEARCH PROFILE
+${professorProfileText}
+
+${manualResearchInfo ? `## ADDITIONAL RESEARCH DETAILS (User Provided)
+${manualResearchInfo}
+
+` : ''}
+
+## STUDENT'S BACKGROUND
 ${cvContext}
 
-Create a personalized email with:
-1. Professional subject line
-2. Brief introduction mentioning the Spring 2026 application
-3. Specific connection between student's work and professor's research
-4. Request for supervision
+## EMAIL REQUIREMENTS
+1. **Subject Line:** Creative, specific, and professional (avoid generic "PhD Application")
+2. **Opening:** Warm, specific reference to professor's recent work/lab/project
+3. **Connection:** Explicit link between student's experience and professor's research
+4. **Value Proposition:** What unique skills/perspective student brings
+5. **Call to Action:** Specific request (meeting, discussion, etc.)
+6. **Tone:** Professional but personable, showing genuine interest
+7. **Length:** 150-250 words, concise but comprehensive
 
-${customInstructions ? `Additional notes: ${customInstructions}` : ''}
+${customInstructions ? `## SPECIAL INSTRUCTIONS
+${customInstructions}
 
-Return ONLY valid JSON:
+` : ''}## OUTPUT FORMAT
+Return ONLY valid JSON in this exact format:
 {
-  "subject": "PhD Application - Spring 2026",
-  "body": "Email content here"
-}`
+  "subject": "[Creative, specific subject line]",
+  "body": "[Complete email body with proper formatting]"
+}
+
+**Important:** Make specific references to professor's research, lab name, or projects mentioned in the research profile. Avoid generic language.`
 
       const emailResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -193,19 +261,26 @@ Return ONLY valid JSON:
           'Authorization': `Bearer ${openaiApiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4o',
           messages: [
             {
               role: 'system',
-              content: 'You are an expert at writing professional academic emails for PhD applications.'
+              content: `You are an expert academic email writer specializing in PhD applications. You excel at:
+1. Personalizing emails based on professor's research
+2. Highlighting relevant student experience
+3. Creating compelling connections between student and professor work
+4. Writing concise, professional academic correspondence
+5. Following proper academic email etiquette`
             },
             {
               role: 'user',
               content: emailPrompt
             }
           ],
-          temperature: 0.7,
-          max_tokens: 1500
+          temperature: 0.6,
+          max_tokens: 2000,
+          presence_penalty: 0.1,
+          frequency_penalty: 0.1
         })
       })
 
@@ -238,7 +313,60 @@ Return ONLY valid JSON:
 
     } catch (error: any) {
       console.error('Email generation error:', error)
-      alert(`Failed to generate email: ${error.message}`)
+
+      // Try fallback with simpler prompt if main generation fails
+      if (error.message.includes('gpt-4o')) {
+        try {
+          const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${openaiApiKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are an expert at writing professional PhD application emails.'
+                },
+                {
+                  role: 'user',
+                  content: `Write a PhD application email to Professor ${professor.name} at ${professor.university}. Student: Abdus Salam, MSc Computer Science, specializing in medical imaging and computer vision. Application for Spring 2026. Return JSON format: {"subject": "...", "body": "..."}`
+                }
+              ],
+              temperature: 0.7,
+              max_tokens: 1500
+            })
+          })
+
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json()
+            const fallbackText = fallbackData.choices?.[0]?.message?.content || ''
+
+            try {
+              const parsed = JSON.parse(fallbackText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim())
+              setGeneratedEmail({
+                subject: parsed.subject || 'PhD Application - Spring 2026',
+                body: parsed.body || fallbackText
+              })
+              setInfoMessage('Email generated using fallback method due to API limitations.')
+              return
+            } catch {
+              setGeneratedEmail({
+                subject: 'PhD Application - Spring 2026',
+                body: fallbackText
+              })
+              setInfoMessage('Email generated using fallback method with basic formatting.')
+              return
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Fallback generation failed:', fallbackError)
+        }
+      }
+
+      alert(`Failed to generate email: ${error.message}. Please try again or check your API key.`)
     } finally {
       setLoading(false)
     }
@@ -311,14 +439,25 @@ Return ONLY valid JSON:
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Label>Additional Instructions (Optional)</Label>
-                  <Textarea
-                    placeholder="e.g., Mention specific deadline, emphasize keypoint detection experience, reference particular paper..."
-                    value={customInstructions}
-                    onChange={(e) => setCustomInstructions(e.target.value)}
-                    rows={4}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Manual Research Info (Optional)</Label>
+                    <Textarea
+                      placeholder="If you know specific details about the professor's research, lab, recent papers, or projects, add them here to improve email personalization..."
+                      value={manualResearchInfo}
+                      onChange={(e) => setManualResearchInfo(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Additional Instructions (Optional)</Label>
+                    <Textarea
+                      placeholder="e.g., Mention specific deadline, emphasize keypoint detection experience, reference particular paper..."
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
                 </div>
 
                 <Button
@@ -336,15 +475,106 @@ Return ONLY valid JSON:
               </CardContent>
             </Card>
 
-            {professorInfo && (
+            {(professorInsights || infoMessage) && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Professor Information</CardTitle>
+                  <CardTitle className="text-lg">Google Search Insights</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="bg-gray-50 rounded-lg p-4 border">
-                    <pre className="text-sm whitespace-pre-wrap font-sans">{professorInfo}</pre>
-                  </div>
+                <CardContent className="space-y-3">
+                  {infoMessage && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-md p-3 text-xs text-slate-700">
+                      {infoMessage}
+                    </div>
+                  )}
+                  {professorInsights ? (
+                    <div className="space-y-3 text-sm text-gray-700">
+                      <div>
+                        <span className="font-medium text-gray-900">Summary</span>
+                        <p className="mt-1 text-gray-600">
+                          {professorInsights.summary || 'No verified summary found. See links for more context.'}
+                        </p>
+                      </div>
+
+                      {(professorInsights.labName || professorInsights.personalWebsite) && (
+                        <div className="grid grid-cols-1 gap-2">
+                          {professorInsights.labName && (
+                            <div>
+                              <span className="font-medium text-gray-900">Lab</span>
+                              <p className="mt-1 text-gray-600">
+                                {professorInsights.labWebsite ? (
+                                  <a
+                                    href={professorInsights.labWebsite}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    {professorInsights.labName}
+                                  </a>
+                                ) : (
+                                  professorInsights.labName
+                                )}
+                              </p>
+                            </div>
+                          )}
+                          {professorInsights.personalWebsite && (
+                            <div>
+                              <span className="font-medium text-gray-900">Personal Website</span>
+                              <p className="mt-1">
+                                <a
+                                  href={professorInsights.personalWebsite}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {professorInsights.personalWebsite}
+                                </a>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {professorInsights.relatedLinks.length > 0 && (
+                        <div>
+                          <span className="font-medium text-gray-900">Notable Links</span>
+                          <ul className="mt-2 space-y-2">
+                            {professorInsights.relatedLinks.map((link) => (
+                              <li key={link.url} className="text-sm">
+                                <a
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  {link.title}
+                                </a>
+                                {link.snippet && (
+                                  <p className="text-xs text-gray-500 mt-1">{link.snippet}</p>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {professorInsights.usedQueries.length > 0 && (
+                        <div>
+                          <span className="font-medium text-gray-900">Search Queries</span>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {professorInsights.usedQueries.map((query) => (
+                              <Badge key={query} variant="outline">
+                                {query}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      No structured information retrieved. Review the professor details manually before sending.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}
