@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { X, Plus, Loader2 } from "lucide-react"
+import { X, Plus, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { db, type University } from "@/lib/supabase"
 import { toast } from "@/hooks/use-toast"
 
@@ -46,6 +46,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
 
   const [newRequirement, setNewRequirement] = useState("")
   const [newFundingType, setNewFundingType] = useState("")
+  const [showRequirements, setShowRequirements] = useState(false)
 
   const requirementOptions = [
     "Transcripts",
@@ -149,310 +150,344 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{university ? "Edit University" : "Add University"}</CardTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white shadow-2xl border-0">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
+          <CardTitle className="text-xl font-semibold text-gray-800">
+            {university ? "Edit University" : "Add University"}
+          </CardTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-gray-100">
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">University Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  required
-                  placeholder="e.g., Stanford University"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="program">Program *</Label>
-                <Input
-                  id="program"
-                  value={formData.program}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, program: e.target.value }))}
-                  required
-                  placeholder="e.g., Computer Science PhD"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="degree">Degree Type</Label>
-                <Select
-                  value={formData.degree}
-                  onValueChange={(value: "PhD" | "Masters") => setFormData((prev) => ({ ...prev, degree: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PhD">PhD</SelectItem>
-                    <SelectItem value="Masters">Masters</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
-                  placeholder="e.g., Stanford, CA"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ranking">Ranking</Label>
-                <Input
-                  id="ranking"
-                  type="number"
-                  value={formData.ranking}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, ranking: e.target.value }))}
-                  placeholder="e.g., 1"
-                />
+        <CardContent className="p-3">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="bg-blue-50/40 rounded-lg p-2 border border-blue-200/50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <Label htmlFor="name" className="text-xs font-medium text-blue-900">University Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    required
+                    className="h-8 mt-0.5 text-sm border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="e.g., Stanford University"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="program" className="text-xs font-medium text-blue-900">Program *</Label>
+                  <Input
+                    id="program"
+                    value={formData.program}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, program: e.target.value }))}
+                    required
+                    className="h-8 mt-0.5 text-sm border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="e.g., Computer Science PhD"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="degree" className="text-xs font-medium text-blue-900">Degree Type</Label>
+                  <Select value={formData.degree} onValueChange={(value: "PhD" | "Masters") => setFormData((prev) => ({ ...prev, degree: value }))}>
+                    <SelectTrigger className="h-8 mt-0.5 text-sm border-blue-200 focus:border-blue-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PhD">PhD</SelectItem>
+                      <SelectItem value="Masters">Masters</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            {/* Application Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="application_fee">Application Fee ($)</Label>
-                <Input
-                  id="application_fee"
-                  type="number"
-                  step="0.01"
-                  value={formData.application_fee}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, application_fee: e.target.value }))}
-                  placeholder="125.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="deadline">Application Deadline *</Label>
-                <Input
-                  id="deadline"
-                  type="date"
-                  value={formData.deadline}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, deadline: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sop_length">SOP Length (pages)</Label>
-                <Input
-                  id="sop_length"
-                  type="number"
-                  value={formData.sop_length}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
-                  placeholder="2"
-                />
+            <div className="bg-green-50/40 rounded-lg p-2 border border-green-200/50">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                <div>
+                  <Label htmlFor="location" className="text-xs font-medium text-green-900">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
+                    className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500 focus:ring-green-500"
+                    placeholder="City, State"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ranking" className="text-xs font-medium text-green-900">Ranking</Label>
+                  <Input
+                    id="ranking"
+                    type="number"
+                    value={formData.ranking}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, ranking: e.target.value }))}
+                    className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500 focus:ring-green-500"
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="application_fee" className="text-xs font-medium text-green-900">Fee ($)</Label>
+                  <Input
+                    id="application_fee"
+                    type="number"
+                    step="0.01"
+                    value={formData.application_fee}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, application_fee: e.target.value }))}
+                    className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500 focus:ring-green-500"
+                    placeholder="125"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="deadline" className="text-xs font-medium text-green-900">Deadline *</Label>
+                  <Input
+                    id="deadline"
+                    type="date"
+                    value={formData.deadline}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, deadline: e.target.value }))}
+                    required
+                    className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="status" className="text-xs font-medium text-green-900">Status</Label>
+                  <Select value={formData.status} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}>
+                    <SelectTrigger className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not-started">Not Started</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="submitted">Submitted</SelectItem>
+                      <SelectItem value="under-review">Under Review</SelectItem>
+                      <SelectItem value="interview">Interview</SelectItem>
+                      <SelectItem value="accepted">Accepted</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="waitlisted">Waitlisted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="priority" className="text-xs font-medium text-green-900">Priority</Label>
+                  <Select value={formData.priority} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, priority: value }))}>
+                    <SelectTrigger className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            {/* Status and Priority */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="status">Application Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not-started">Not Started</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="under-review">Under Review</SelectItem>
-                    <SelectItem value="interview">Interview</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                    <SelectItem value="waitlisted">Waitlisted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select
-                  value={formData.priority}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, priority: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="bg-purple-50/40 rounded-lg p-3 border border-purple-200/50">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 items-start">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="gre_required"
+                      checked={formData.gre_required}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
+                    />
+                    <Label htmlFor="gre_required" className="text-sm font-medium text-purple-900">GRE Required</Label>
+                  </div>
+                  {formData.gre_required && (
+                    <div className="rounded-lg border border-purple-200/70 bg-white/70 p-3 shadow-sm">
+                      <Label htmlFor="gre_score" className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Expected Score</Label>
+                      <Input
+                        id="gre_score"
+                        value={formData.gre_score}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, gre_score: e.target.value }))}
+                        placeholder="e.g., 320+"
+                        className="mt-2 h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sop_length" className="text-sm font-medium text-purple-900 block">SOP Length</Label>
+                  <Input
+                    id="sop_length"
+                    type="number"
+                    value={formData.sop_length}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
+                    placeholder="Pages (e.g., 2)"
+                    className="h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="funding_available"
+                      checked={formData.funding_available}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
+                    />
+                    <Label htmlFor="funding_available" className="text-sm font-medium text-purple-900">Funding Available</Label>
+                  </div>
+                  {formData.funding_available && (
+                    <div className="rounded-lg border border-purple-200/70 bg-white/70 p-3 shadow-sm space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="funding_amount" className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Estimated Amount</Label>
+                        <Input
+                          id="funding_amount"
+                          value={formData.funding_amount}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
+                          placeholder="e.g., $55k/year"
+                          className="h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Funding Types</Label>
+                          {formData.funding_types.length > 0 && (
+                            <Badge variant="outline" className="text-[10px] font-semibold uppercase bg-purple-100 text-purple-800 border-purple-200">
+                              {formData.funding_types.length} selected
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2 min-h-[28px]">
+                          {formData.funding_types.map((type, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200">
+                              {type}
+                              <X className="h-3 w-3 ml-1 cursor-pointer hover:text-purple-600" onClick={() => removeFundingType(type)} />
+                            </Badge>
+                          ))}
+                          {formData.funding_types.length === 0 && (
+                            <span className="text-xs text-purple-500 italic">No types added yet</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Select value={newFundingType} onValueChange={setNewFundingType}>
+                            <SelectTrigger className="h-9 w-full text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500 sm:flex-1">
+                              <SelectValue placeholder="Add funding type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {fundingTypeOptions.filter((opt) => !formData.funding_types.includes(opt)).map((option) => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-9 w-full px-3 bg-purple-600 hover:bg-purple-700 text-white sm:w-auto"
+                            onClick={() => addFundingType(newFundingType)}
+                            disabled={!newFundingType}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {formData.funding_available && (
+                  <div className="hidden lg:block" />
+                )}
               </div>
             </div>
 
-            {/* Acceptance Funding Status - Only show when accepted */}
             {formData.status === "accepted" && (
-              <div className="space-y-2">
-                <Label htmlFor="acceptance_funding_status">Acceptance Funding Status</Label>
-                <Select
-                  value={formData.acceptance_funding_status}
-                  onValueChange={(value: any) => setFormData((prev) => ({ ...prev, acceptance_funding_status: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="with-funding">Accepted with Funding</SelectItem>
-                    <SelectItem value="without-funding">Accepted without Funding</SelectItem>
-                    <SelectItem value="pending">Funding Decision Pending</SelectItem>
-                    <SelectItem value="unknown">Unknown</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">
-                  Specify whether you were accepted with or without funding
-                </p>
+              <div className="bg-yellow-50/40 rounded-lg p-2 border border-yellow-200/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="acceptance_funding_status" className="text-xs font-medium text-yellow-900">Acceptance Funding Status</Label>
+                    <Select value={formData.acceptance_funding_status} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, acceptance_funding_status: value }))}>
+                      <SelectTrigger className="h-8 mt-0.5 text-sm border-yellow-200 focus:border-yellow-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="with-funding">With Funding</SelectItem>
+                        <SelectItem value="without-funding">Without Funding</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="unknown">Unknown</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* GRE Requirements */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="gre_required"
-                  checked={formData.gre_required}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
-                />
-                <Label htmlFor="gre_required">GRE Required</Label>
-              </div>
-
-              {formData.gre_required && (
-                <div className="space-y-2">
-                  <Label htmlFor="gre_score">GRE Score Requirement</Label>
-                  <Input
-                    id="gre_score"
-                    value={formData.gre_score}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, gre_score: e.target.value }))}
-                    placeholder="e.g., 320+, 160V/160Q"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Requirements */}
-            <div className="space-y-4">
-              <Label>Application Requirements</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {formData.requirements.map((req, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {req}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => removeRequirement(req)} />
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Select value={newRequirement} onValueChange={setNewRequirement}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select requirement" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {requirementOptions
-                      .filter((opt) => !formData.requirements.includes(opt))
-                      .map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" onClick={() => addRequirement(newRequirement)} disabled={!newRequirement}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Funding */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="funding_available"
-                  checked={formData.funding_available}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
-                />
-                <Label htmlFor="funding_available">Funding Available</Label>
-              </div>
-
-              {formData.funding_available && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="funding_amount">Funding Amount</Label>
-                    <Input
-                      id="funding_amount"
-                      value={formData.funding_amount}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
-                      placeholder="e.g., $55,000/year"
-                    />
+            <div
+              className="bg-indigo-50/40 rounded-lg p-2 border border-indigo-200/50 cursor-pointer hover:bg-indigo-100/40 transition-colors"
+              onClick={() => setShowRequirements(!showRequirements)}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs font-medium text-indigo-900 cursor-pointer">Application Requirements</Label>
+                    {formData.requirements.length > 0 && (
+                      <Badge variant="outline" className="text-xs h-5 bg-indigo-100 text-indigo-800 border-indigo-300">
+                        {formData.requirements.length}
+                      </Badge>
+                    )}
                   </div>
+                  <div className="flex items-center text-indigo-700">
+                    {showRequirements ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label>Funding Types</Label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {formData.funding_types.map((type, index) => (
-                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                          {type}
-                          <X className="h-3 w-3 cursor-pointer" onClick={() => removeFundingType(type)} />
+                {showRequirements && (
+                  <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-wrap gap-1">
+                      {formData.requirements.map((req, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs h-6 bg-indigo-100 text-indigo-800">
+                          {req}
+                          <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => removeRequirement(req)} />
                         </Badge>
                       ))}
                     </div>
                     <div className="flex gap-2">
-                      <Select value={newFundingType} onValueChange={setNewFundingType}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Select funding type" />
+                      <Select value={newRequirement} onValueChange={setNewRequirement}>
+                        <SelectTrigger className="h-8 text-sm border-indigo-200 focus:border-indigo-500">
+                          <SelectValue placeholder="Add requirement" />
                         </SelectTrigger>
                         <SelectContent>
-                          {fundingTypeOptions
-                            .filter((opt) => !formData.funding_types.includes(opt))
-                            .map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
+                          {requirementOptions.filter((opt) => !formData.requirements.includes(opt)).map((option) => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      <Button type="button" onClick={() => addFundingType(newFundingType)} disabled={!newFundingType}>
-                        <Plus className="h-4 w-4" />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 px-2 bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => addRequirement(newRequirement)}
+                        disabled={!newRequirement}
+                      >
+                        <Plus className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                placeholder="Any additional notes about this application..."
-                rows={3}
-              />
+            <div className="bg-gray-50/40 rounded-lg p-2 border border-gray-200/50">
+              <div>
+                <Label htmlFor="notes" className="text-xs font-medium text-gray-900">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Any additional information about this application..."
+                  rows={2}
+                  className="mt-0.5 text-sm resize-none border-gray-200 focus:border-gray-500 focus:ring-gray-500"
+                />
+              </div>
             </div>
 
-            {/* Submit Buttons */}
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+            <div className="flex justify-end space-x-2 pt-1">
+              <Button type="button" variant="outline" size="sm" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading} className="bg-primary-500 hover:bg-primary-600">
-                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {university ? "Update University" : "Add University"}
+              <Button type="submit" disabled={loading} size="sm">
+                {loading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                {university ? "Update" : "Add"}
               </Button>
             </div>
           </form>
