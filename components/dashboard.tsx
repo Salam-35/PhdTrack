@@ -5,7 +5,6 @@ import { useUser } from "@/components/UserProvider"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import {
   Clock,
   TrendingUp,
@@ -175,12 +174,12 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* Stats Grid - Enhanced */}
-      <div className="grid grid-cols-2 gap-4">
-        {[
+      {/* Dashboard Summary */}
+      {(() => {
+        const primaryStats = [
           {
             label: "Total Applications",
-            value: stats.totalApplications,
+            value: stats.totalApplications.toString(),
             icon: GraduationCap,
             gradient: "from-blue-500 to-blue-600",
             bgLight: "bg-blue-50",
@@ -188,7 +187,7 @@ export default function Dashboard({
           },
           {
             label: "Professors Contacted",
-            value: stats.professorsContacted,
+            value: stats.professorsContacted.toString(),
             icon: Users,
             gradient: "from-green-500 to-green-600",
             bgLight: "bg-green-50",
@@ -196,76 +195,97 @@ export default function Dashboard({
           },
           {
             label: "Documents Ready",
-            value: stats.documentsReady,
+            value: stats.documentsReady.toString(),
             icon: FileText,
             gradient: "from-purple-500 to-purple-600",
             bgLight: "bg-purple-50",
             textColor: "text-purple-600"
           },
           {
-            label: "Total Spent",
-            value: `$${stats.totalSpent}`,
+            label: "Total Spend",
+            value: stats.totalSpent ? `$${stats.totalSpent.toLocaleString()}` : "$0",
             icon: DollarSign,
             gradient: "from-orange-500 to-orange-600",
             bgLight: "bg-orange-50",
             textColor: "text-orange-600"
-          },
-        ].map((stat, i) => {
-          const Icon = stat.icon
-          return (
-            <Card key={i} className={`${stat.bgLight} border-0 shadow-lg hover:shadow-xl transition-all duration-300`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-                    <p className={`text-2xl font-bold ${stat.textColor}`}>{stat.value}</p>
-                  </div>
-                  <div className={`bg-gradient-to-br ${stat.gradient} p-3 rounded-xl shadow-lg`}>
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+          }
+        ]
 
-      {/* Application Progress - Enhanced */}
-      <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-2 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-gray-800">Application Progress</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="relative">
-            <Progress
-              value={(stats.submitted / stats.totalApplications) * 100 || 0}
-              className="h-3 bg-gray-200"
-            />
-            <div className="absolute -top-6 right-0 text-sm font-semibold text-indigo-600">
-              {Math.round((stats.submitted / stats.totalApplications) * 100) || 0}% Complete
-            </div>
+        const overallProgress = stats.totalApplications === 0
+          ? 0
+          : Math.round((stats.submitted / stats.totalApplications) * 100)
+
+        const progressStats = [
+          {
+            label: "Overall Progress",
+            value: `${overallProgress}%`,
+            icon: TrendingUp,
+            gradient: "from-indigo-500 to-violet-500",
+            bgLight: "bg-indigo-50",
+            textColor: "text-indigo-600"
+          },
+          {
+            label: "Submitted & Beyond",
+            value: stats.submitted.toString(),
+            icon: Calendar,
+            gradient: "from-emerald-500 to-teal-500",
+            bgLight: "bg-emerald-50",
+            textColor: "text-emerald-600"
+          },
+          {
+            label: "In Progress",
+            value: stats.inProgress.toString(),
+            icon: Clock,
+            gradient: "from-sky-500 to-cyan-500",
+            bgLight: "bg-sky-50",
+            textColor: "text-sky-600"
+          },
+          {
+            label: "Not Started",
+            value: stats.notStarted.toString(),
+            icon: Bell,
+            gradient: "from-slate-500 to-gray-500",
+            bgLight: "bg-slate-50",
+            textColor: "text-slate-600"
+          }
+        ]
+
+        const renderGridBox = (title: string, items: typeof primaryStats) => (
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold text-gray-800">{title}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {items.map((item, index) => {
+                const Icon = item.icon
+                return (
+                  <div
+                    key={index}
+                    className={`${item.bgLight} rounded-xl border border-white/40 shadow-sm p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-500">{item.label}</p>
+                        <p className={`mt-2 text-2xl font-bold ${item.textColor}`}>{item.value}</p>
+                      </div>
+                      <div className={`bg-gradient-to-br ${item.gradient} text-white rounded-lg p-2.5`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        )
+
+        return (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {renderGridBox("At-a-glance Stats", primaryStats)}
+            {renderGridBox("Application Progress", progressStats)}
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-green-600 mb-1">{stats.submitted}</div>
-              <div className="text-xs text-gray-600 font-medium">✅ Submitted</div>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-blue-600 mb-1">{stats.inProgress}</div>
-              <div className="text-xs text-gray-600 font-medium">🛠️ In Progress</div>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-gray-400 mb-1">{stats.notStarted}</div>
-              <div className="text-xs text-gray-600 font-medium">⏳ Not Started</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        )
+      })()}
 
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
