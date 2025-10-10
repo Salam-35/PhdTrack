@@ -326,31 +326,41 @@ export default function PhDTrackerPro() {
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Application Tracker Pro</h1>
-                <p className="text-xs text-gray-500">Organise Your PhD Application Process</p>
+                <h1 className="text-lg font-bold text-gray-900">Application Tracker</h1>
+                <p className="text-xs text-gray-500">Organise Your Grad Applications</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
+
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search applications, professors, documents..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-80 bg-white border-gray-300 shadow-sm focus:shadow-md transition-shadow"
+                />
+              </div>
+
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs bg-red-500">
                   {timelineEvents.filter((e) => e.status === "today" || e.status === "overdue").length}
                 </Badge>
               </Button>
-              
+
               <Button variant="ghost" size="icon">
                 <Filter className="h-5 w-5" />
               </Button>
-              
+
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
                     {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Profile" 
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
                         className="h-8 w-8 rounded-full object-cover"
                       />
                     ) : (
@@ -369,20 +379,11 @@ export default function PhDTrackerPro() {
                     <span>Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
+                </DropdownMenu>
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="mt-3 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search applications, professors, documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-gray-50 border-gray-200"
-            />
-          </div>
+
         </div>
       </header>
 

@@ -281,47 +281,56 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
               </div>
             </div>
 
-            <div className="bg-purple-50/40 rounded-lg p-2 border border-purple-200/50">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
-                <div className="flex items-center gap-2 h-8">
+            <div className="bg-purple-50/30 rounded-lg p-3 border border-purple-200/40">
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
                   <Checkbox
                     id="gre_required"
                     checked={formData.gre_required}
                     onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
                   />
-                  <Label htmlFor="gre_required" className="text-xs font-medium text-purple-900">GRE Required</Label>
+                  <Label htmlFor="gre_required" className="text-sm font-medium text-purple-900">GRE Required</Label>
+                  {formData.gre_required && (
+                    <Input
+                      id="gre_score"
+                      value={formData.gre_score}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, gre_score: e.target.value }))}
+                      placeholder="Score (e.g., 320+)"
+                      className="h-9 w-32 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500 ml-2"
+                    />
+                  )}
                 </div>
 
-                <Input
-                  id="sop_length"
-                  value={formData.sop_length}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
-                  placeholder="SOP Length"
-                  className="h-8 text-sm border-purple-200 focus:border-purple-500"
-                />
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="sop_length" className="text-sm font-medium text-purple-900">SOP Length:</Label>
+                  <Input
+                    id="sop_length"
+                    type="number"
+                    value={formData.sop_length}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
+                    placeholder="Pages"
+                    className="h-9 w-20 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                  />
+                </div>
 
-                <div className="flex items-center gap-2 h-8">
+                <div className="flex items-center gap-2">
                   <Checkbox
                     id="funding_available"
                     checked={formData.funding_available}
                     onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
                   />
-                  <Label htmlFor="funding_available" className="text-xs font-medium text-purple-900">Funding</Label>
-                </div>
-
-                {formData.funding_available && (
-                  <>
-                    <Input
-                      id="funding_amount"
-                      value={formData.funding_amount}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
-                      placeholder="$55k/year"
-                      className="h-8 text-sm border-purple-200 focus:border-purple-500"
-                    />
-
-                    <div className="flex gap-1">
+                  <Label htmlFor="funding_available" className="text-sm font-medium text-purple-900">Funding</Label>
+                  {formData.funding_available && (
+                    <>
+                      <Input
+                        id="funding_amount"
+                        value={formData.funding_amount}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
+                        placeholder="$55k/year"
+                        className="h-9 w-28 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500 ml-2"
+                      />
                       <Select value={newFundingType} onValueChange={setNewFundingType}>
-                        <SelectTrigger className="h-8 text-xs border-purple-200">
+                        <SelectTrigger className="h-9 w-32 text-sm border-purple-200 focus:border-purple-500">
                           <SelectValue placeholder="Add type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -333,23 +342,23 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                       <Button
                         type="button"
                         size="sm"
-                        className="h-8 px-2 bg-purple-600 hover:bg-purple-700"
+                        className="h-9 px-3 bg-purple-600 hover:bg-purple-700 text-white"
                         onClick={() => addFundingType(newFundingType)}
                         disabled={!newFundingType}
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
 
               {formData.funding_available && formData.funding_types.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-purple-200/50">
+                <div className="flex flex-wrap gap-1 mt-3 pt-2 border-t border-purple-200/50">
                   {formData.funding_types.map((type, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                    <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200">
                       {type}
-                      <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => removeFundingType(type)} />
+                      <X className="h-3 w-3 ml-1 cursor-pointer hover:text-purple-600" onClick={() => removeFundingType(type)} />
                     </Badge>
                   ))}
                 </div>
