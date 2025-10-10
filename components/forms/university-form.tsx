@@ -61,8 +61,8 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
   ]
 
   const fundingTypeOptions = [
-    "Research Assistantship",
-    "Teaching Assistantship",
+    "RA",
+    "TA",
     "Fellowship",
     "Scholarship",
     "Tuition Waiver",
@@ -281,114 +281,79 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
               </div>
             </div>
 
-            <div className="bg-purple-50/40 rounded-lg p-3 border border-purple-200/50">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 items-start">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="gre_required"
-                      checked={formData.gre_required}
-                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
-                    />
-                    <Label htmlFor="gre_required" className="text-sm font-medium text-purple-900">GRE Required</Label>
-                  </div>
-                  {formData.gre_required && (
-                    <div className="rounded-lg border border-purple-200/70 bg-white/70 p-3 shadow-sm">
-                      <Label htmlFor="gre_score" className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Expected Score</Label>
-                      <Input
-                        id="gre_score"
-                        value={formData.gre_score}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, gre_score: e.target.value }))}
-                        placeholder="e.g., 320+"
-                        className="mt-2 h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sop_length" className="text-sm font-medium text-purple-900 block">SOP Length</Label>
-                  <Input
-                    id="sop_length"
-                    type="number"
-                    value={formData.sop_length}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
-                    placeholder="Pages (e.g., 2)"
-                    className="h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+            <div className="bg-purple-50/40 rounded-lg p-2 border border-purple-200/50">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 items-center">
+                <div className="flex items-center gap-2 h-8">
+                  <Checkbox
+                    id="gre_required"
+                    checked={formData.gre_required}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
                   />
+                  <Label htmlFor="gre_required" className="text-xs font-medium text-purple-900">GRE Required</Label>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="funding_available"
-                      checked={formData.funding_available}
-                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
-                    />
-                    <Label htmlFor="funding_available" className="text-sm font-medium text-purple-900">Funding Available</Label>
-                  </div>
-                  {formData.funding_available && (
-                    <div className="rounded-lg border border-purple-200/70 bg-white/70 p-3 shadow-sm space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="funding_amount" className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Estimated Amount</Label>
-                        <Input
-                          id="funding_amount"
-                          value={formData.funding_amount}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
-                          placeholder="e.g., $55k/year"
-                          className="h-9 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <Label className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Funding Types</Label>
-                          {formData.funding_types.length > 0 && (
-                            <Badge variant="outline" className="text-[10px] font-semibold uppercase bg-purple-100 text-purple-800 border-purple-200">
-                              {formData.funding_types.length} selected
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2 min-h-[28px]">
-                          {formData.funding_types.map((type, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200">
-                              {type}
-                              <X className="h-3 w-3 ml-1 cursor-pointer hover:text-purple-600" onClick={() => removeFundingType(type)} />
-                            </Badge>
-                          ))}
-                          {formData.funding_types.length === 0 && (
-                            <span className="text-xs text-purple-500 italic">No types added yet</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Select value={newFundingType} onValueChange={setNewFundingType}>
-                            <SelectTrigger className="h-9 w-full text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500 sm:flex-1">
-                              <SelectValue placeholder="Add funding type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {fundingTypeOptions.filter((opt) => !formData.funding_types.includes(opt)).map((option) => (
-                                <SelectItem key={option} value={option}>{option}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-9 w-full px-3 bg-purple-600 hover:bg-purple-700 text-white sm:w-auto"
-                            onClick={() => addFundingType(newFundingType)}
-                            disabled={!newFundingType}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <Input
+                  id="sop_length"
+                  value={formData.sop_length}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
+                  placeholder="SOP Length"
+                  className="h-8 text-sm border-purple-200 focus:border-purple-500"
+                />
+
+                <div className="flex items-center gap-2 h-8">
+                  <Checkbox
+                    id="funding_available"
+                    checked={formData.funding_available}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
+                  />
+                  <Label htmlFor="funding_available" className="text-xs font-medium text-purple-900">Funding</Label>
                 </div>
 
                 {formData.funding_available && (
-                  <div className="hidden lg:block" />
+                  <>
+                    <Input
+                      id="funding_amount"
+                      value={formData.funding_amount}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
+                      placeholder="$55k/year"
+                      className="h-8 text-sm border-purple-200 focus:border-purple-500"
+                    />
+
+                    <div className="flex gap-1">
+                      <Select value={newFundingType} onValueChange={setNewFundingType}>
+                        <SelectTrigger className="h-8 text-xs border-purple-200">
+                          <SelectValue placeholder="Add type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fundingTypeOptions.filter((opt) => !formData.funding_types.includes(opt)).map((option) => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 px-2 bg-purple-600 hover:bg-purple-700"
+                        onClick={() => addFundingType(newFundingType)}
+                        disabled={!newFundingType}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
+
+              {formData.funding_available && formData.funding_types.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-purple-200/50">
+                  {formData.funding_types.map((type, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                      {type}
+                      <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => removeFundingType(type)} />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {formData.status === "accepted" && (
