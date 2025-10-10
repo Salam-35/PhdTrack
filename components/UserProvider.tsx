@@ -4,12 +4,45 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useRe
 import { User } from '@supabase/supabase-js'
 import { supabase, db, type UserProfile } from '@/lib/supabase'
 
+const extractProfileDetails = (user: User) => {
+  const metadata = user.user_metadata || {}
+  const emailFallback = user.email?.split('@')[0] || 'User'
+  const fullNameFromMeta = metadata.full_name || metadata.name || metadata.display_name || ''
+  let firstName = metadata.first_name || metadata.given_name || ''
+  let lastName = metadata.last_name || metadata.family_name || ''
+
+  if ((!firstName || !lastName) && fullNameFromMeta) {
+    const parts = fullNameFromMeta.trim().split(/\s+/)
+    if (!firstName && parts.length) {
+      firstName = parts.shift() || ''
+    }
+    if (!lastName && parts.length) {
+      lastName = parts.join(' ')
+    }
+  }
+
+  const displayName = (metadata.display_name ||
+    fullNameFromMeta ||
+    [firstName, lastName].filter(Boolean).join(' ') ||
+    emailFallback).trim()
+
+  const avatarUrl = metadata.avatar_url || metadata.picture || metadata.avatar || ''
+
+  return {
+    firstName,
+    lastName,
+    displayName,
+    avatarUrl,
+  }
+}
+
 interface UserContextType {
   user: User | null
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, userData?: any) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
   uploadAvatar: (file: File) => Promise<string>
@@ -41,13 +74,53 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     loadingProfileRef.current = true
     try {
-      // Add timeout to profile fetch
       const profilePromise = db.getUserProfile(userId)
       const timeoutPromise = new Promise<null>((resolve) => {
         setTimeout(() => resolve(null), 5000)
       })
 
-      const userProfile = await Promise.race([profilePromise, timeoutPromise])
+      let userProfile = await Promise.race([profilePromise, timeoutPromise])
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+
+      if (!userProfile && authUser && authUser.id === userId) {
+        try {
+          userProfile = await db.createDefaultProfile(authUser)
+        } catch (creationError) {
+          console.error('Error creating default profile:', creationError)
+        }
+      } else if (userProfile && authUser && authUser.id === userId) {
+        const { firstName, lastName, displayName, avatarUrl } = extractProfileDetails(authUser)
+        const updates: Partial<UserProfile> = {}
+
+        if (!userProfile.first_name && firstName) {
+          updates.first_name = firstName
+        }
+        if (!userProfile.last_name && lastName) {
+          updates.last_name = lastName
+        }
+        const emailFallback = userProfile.email?.split('@')[0]
+        if (
+          displayName &&
+          (
+            !userProfile.display_name ||
+            userProfile.display_name === userProfile.email ||
+            (emailFallback && userProfile.display_name === emailFallback)
+          )
+        ) {
+          updates.display_name = displayName
+        }
+        if (!userProfile.avatar_url && avatarUrl) {
+          updates.avatar_url = avatarUrl
+        }
+
+        if (Object.keys(updates).length > 0) {
+          try {
+            userProfile = await db.updateUserProfile(userId, updates)
+          } catch (updateError) {
+            console.error('Error updating profile with metadata:', updateError)
+          }
+        }
+      }
 
       if (isMountedRef.current) {
         setProfile(userProfile)
@@ -184,6 +257,30 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [])
 
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      const redirectTo = typeof window !== 'undefined'
+        ? `${window.location.origin}`
+        : undefined
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Google sign-in error:', error)
+      throw error
+    }
+  }, [])
+
   const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut()
@@ -286,6 +383,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loading,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     updateProfile,
     uploadAvatar,
@@ -293,7 +391,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     addResearchInterest,
     removeResearchInterest,
     refreshProfile,
-  }), [user, profile, loading, signIn, signUp, signOut, updateProfile, uploadAvatar, deleteAvatar, addResearchInterest, removeResearchInterest, refreshProfile])
+  }), [user, profile, loading, signIn, signUp, signInWithGoogle, signOut, updateProfile, uploadAvatar, deleteAvatar, addResearchInterest, removeResearchInterest, refreshProfile])
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
 }

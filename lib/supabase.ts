@@ -272,15 +272,37 @@ export const db = {
 
   // Helper function to create default profile after signup
   async createDefaultProfile(user: any): Promise<UserProfile> {
+    const metadata = user?.user_metadata || {}
+    const emailFallback = user?.email?.split("@")[0] || "User"
+    const fullNameFromMeta = metadata.full_name || metadata.name || metadata.display_name || ""
+    let firstName = metadata.first_name || metadata.given_name || ""
+    let lastName = metadata.last_name || metadata.family_name || ""
+
+    if ((!firstName || !lastName) && fullNameFromMeta) {
+      const parts = fullNameFromMeta.trim().split(/\s+/)
+      if (!firstName && parts.length) {
+        firstName = parts.shift() || ""
+      }
+      if (!lastName && parts.length) {
+        lastName = parts.join(" ")
+      }
+    }
+
+    const displayName = (metadata.display_name ||
+      fullNameFromMeta ||
+      [firstName, lastName].filter(Boolean).join(" ") ||
+      emailFallback).trim()
+
+    const avatarUrl = metadata.avatar_url || metadata.picture || metadata.avatar || ""
+
     const defaultProfile: Omit<UserProfile, "created_at" | "updated_at"> = {
       id: user.id,
       email: user.email,
-      display_name: user.user_metadata?.display_name || 
-                   user.user_metadata?.full_name || 
-                   user.email.split('@')[0],
-      first_name: user.user_metadata?.first_name || "",
-      last_name: user.user_metadata?.last_name || "",
-      phone: user.user_metadata?.phone || "",
+      display_name: displayName,
+      first_name: firstName,
+      last_name: lastName,
+      phone: metadata.phone || "",
+      avatar_url: avatarUrl || undefined,
       research_interests: [],
       notification_preferences: {
         deadlines: true,
@@ -292,7 +314,22 @@ export const db = {
       }
     }
 
-    return await this.createUserProfile(defaultProfile)
+    const createdProfile = await this.createUserProfile(defaultProfile)
+
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          display_name: displayName,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: displayName,
+        },
+      })
+    } catch (error) {
+      console.error("Error updating auth metadata:", error)
+    }
+
+    return createdProfile
   },
 
   // Universities (updated with user_id)
