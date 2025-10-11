@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { X, Loader2 } from "lucide-react"
 import { db, type Document, type University } from "@/lib/supabase"
 import { toast } from "@/hooks/use-toast"
-import { useUser } from "@/context/UserProvider"
+import { useUser } from "@/components/UserProvider"
 
 interface DocumentFormProps {
   onClose: () => void

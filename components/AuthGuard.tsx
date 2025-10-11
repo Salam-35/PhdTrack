@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUser } from '@/components/UserProvider'
 import { GraduationCap, Loader2 } from 'lucide-react'
@@ -24,18 +24,53 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [authTimeout, setAuthTimeout] = useState(false)
 
+  // Use refs to track navigation to prevent duplicate redirects
+  const hasRedirectedRef = useRef(false)
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
+  // Memoize whether current route is public
+  const isPublicRoute = useMemo(() => publicRoutes.includes(pathname), [pathname])
+
+  // Reset redirect flag when pathname changes
   useEffect(() => {
-    if (loading) return;
+    hasRedirectedRef.current = false
+  }, [pathname])
 
-    const isPublicRoute = publicRoutes.includes(pathname);
+  // Add timeout for stuck loading states
+  useEffect(() => {
+    if (loading) {
+      timeoutRef.current = setTimeout(() => {
+        setAuthTimeout(true)
+      }, 5000) // 5 second timeout
+
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+        }
+      }
+    } else {
+      setAuthTimeout(false)
+    }
+  }, [loading])
+
+  // Handle navigation redirects
+  useEffect(() => {
+    // Don't redirect while loading (unless timeout occurred)
+    if (loading && !authTimeout) return
+
+    // Prevent duplicate redirects
+    if (hasRedirectedRef.current) return
 
     if (!user && !isPublicRoute) {
-      router.push('/login');
+      hasRedirectedRef.current = true
+      router.push('/login')
     } else if (user && isPublicRoute) {
-      router.push('/');
+      hasRedirectedRef.current = true
+      router.push('/')
     }
-  }, [user, loading, pathname, router]);
+  }, [user, loading, isPublicRoute, router, authTimeout, pathname])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,7 +109,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     }
   }
 
-  if (loading) {
+  // Show loading screen only if truly loading and timeout hasn't occurred
+  if (loading && !authTimeout) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
         <div className="text-center">
@@ -86,10 +122,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           <Loader2 className="h-6 w-6 animate-spin mx-auto mt-4 text-primary-500" />
         </div>
       </div>
-    );
+    )
   }
-
-  const isPublicRoute = publicRoutes.includes(pathname);
 
   if (!user && !isPublicRoute) {
     return (

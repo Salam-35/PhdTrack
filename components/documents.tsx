@@ -7,17 +7,13 @@ import DocumentUploadForm from "@/components/forms/document-upload-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { 
-  Download, 
-  Trash, 
-  FileText, 
-  Calendar, 
-  User, 
+import {
+  Download,
+  Trash,
+  FileText,
+  Calendar,
+  User,
   Eye,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   GraduationCap,
   Upload as UploadIcon
 } from "lucide-react"
@@ -42,11 +38,23 @@ interface Document {
   user_id: string
 }
 
-export default function DocumentsPage() {
+interface DocumentsPageProps {
+  universities: University[]
+  documents: Document[]
+  setUniversities: (universities: University[]) => void
+  setDocuments: (documents: Document[]) => void
+  searchQuery: string
+}
+
+export default function DocumentsPage({
+  universities: propUniversities,
+  documents: propDocuments,
+  setUniversities: setPropUniversities,
+  setDocuments: setPropDocuments,
+  searchQuery
+}: DocumentsPageProps) {
   // Fixed: Get user from context properly
   const { user, loading: userLoading } = useUser()
-  const [universities, setUniversities] = useState<University[]>([])
-  const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchData = async () => {
@@ -72,8 +80,8 @@ export default function DocumentsPage() {
         console.error("Document fetch error:", documentResponse.error)
       }
 
-      setUniversities(universityResponse.data ?? [])
-      setDocuments(documentResponse.data ?? [])
+      setPropUniversities(universityResponse.data ?? [])
+      setPropDocuments(documentResponse.data ?? [])
     } catch (error) {
       console.error("Fetch error:", error)
     } finally {
@@ -112,28 +120,6 @@ export default function DocumentsPage() {
       'other': { label: 'Other', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: '📁' }
     }
     return types[type] || types.other
-  }
-
-  const getRequirementStatus = (required: boolean, hasDocument: boolean) => {
-    if (!required) {
-      return { 
-        icon: <CheckCircle2 className="w-4 h-4 text-gray-400" />, 
-        text: "Not Required", 
-        color: "text-gray-500" 
-      }
-    }
-    if (hasDocument) {
-      return { 
-        icon: <CheckCircle2 className="w-4 h-4 text-green-600" />, 
-        text: "Completed", 
-        color: "text-green-600" 
-      }
-    }
-    return { 
-      icon: <AlertCircle className="w-4 h-4 text-orange-500" />, 
-      text: "Required", 
-      color: "text-orange-500" 
-    }
   }
 
   useEffect(() => {
@@ -182,7 +168,7 @@ export default function DocumentsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Documents</p>
-                  <p className="text-3xl font-bold text-gray-900">{documents.length}</p>
+                  <p className="text-3xl font-bold text-gray-900">{propDocuments.length}</p>
                 </div>
                 <FileText className="w-8 h-8 text-blue-500" />
               </div>
@@ -194,7 +180,7 @@ export default function DocumentsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Universities</p>
-                  <p className="text-3xl font-bold text-gray-900">{universities.length}</p>
+                  <p className="text-3xl font-bold text-gray-900">{propUniversities.length}</p>
                 </div>
                 <GraduationCap className="w-8 h-8 text-green-500" />
               </div>
@@ -206,7 +192,7 @@ export default function DocumentsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Document Types</p>
-                  <p className="text-3xl font-bold text-gray-900">{new Set(documents.map(d => d.type)).size}</p>
+                  <p className="text-3xl font-bold text-gray-900">{new Set(propDocuments.map(d => d.type)).size}</p>
                 </div>
                 <UploadIcon className="w-8 h-8 text-purple-500" />
               </div>
@@ -214,64 +200,7 @@ export default function DocumentsPage() {
           </Card>
         </div>
 
-        {/* University Requirements Section */}
-        <Card className="shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-            <CardTitle className="flex items-center text-xl">
-              <GraduationCap className="w-6 h-6 mr-3 text-blue-600" />
-              Document Requirements by University
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {universities.length === 0 ? (
-              <div className="text-center py-8">
-                <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No universities added yet</p>
-                <p className="text-gray-400 text-sm">Add universities to track document requirements</p>
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {universities.map((university) => {
-                  const sopDoc = documents.find(d => d.type === 'sop')
-                  const cvDoc = documents.find(d => d.type === 'cv')
-                  const lorDoc = documents.find(d => d.type === 'lor')
-                  const transcriptDoc = documents.find(d => d.type === 'transcript')
-                  
-                  return (
-                    <Card key={university.id} className="border border-gray-200 hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg font-semibold text-gray-800">
-                          {university.name}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {[
-                            { type: 'SOP', required: university.sop_required, hasDoc: !!sopDoc },
-                            { type: 'CV', required: university.cv_required, hasDoc: !!cvDoc },
-                            { type: 'LOR', required: university.lor_required, hasDoc: !!lorDoc },
-                            { type: 'Transcript', required: university.transcript_required, hasDoc: !!transcriptDoc }
-                          ].map(({ type, required, hasDoc }) => {
-                            const status = getRequirementStatus(required, hasDoc)
-                            return (
-                              <div key={type} className="flex items-center space-x-2">
-                                {status.icon}
-                                <span className="text-sm font-medium">{type}:</span>
-                                <span className={`text-sm ${status.color}`}>{status.text}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Separator className="my-8" />
+        <div className="border-t border-slate-200/60" />
 
         {/* Upload Section */}
         <div className="space-y-6">
@@ -285,16 +214,16 @@ export default function DocumentsPage() {
               <div className="flex items-center">
                 <FileText className="w-6 h-6 mr-3 text-slate-600" />
                 Uploaded Documents
-                {documents.length > 0 && (
+                {propDocuments.length > 0 && (
                   <Badge variant="secondary" className="ml-3">
-                    {documents.length}
+                    {propDocuments.length}
                   </Badge>
                 )}
               </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {documents.length === 0 ? (
+            {propDocuments.length === 0 ? (
               <div className="text-center py-12">
                 <div className="bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                   <FileText className="w-10 h-10 text-gray-400" />
@@ -304,7 +233,7 @@ export default function DocumentsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {documents.map((doc) => {
+                {propDocuments.map((doc) => {
                   const typeInfo = getDocumentTypeInfo(doc.type)
                   return (
                     <Card key={doc.id} className="border border-gray-200 hover:shadow-md transition-all duration-200">

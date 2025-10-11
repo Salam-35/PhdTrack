@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,21 +9,22 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
 import { useUser } from "@/components/UserProvider"
 import ProfessorForm from "@/components/forms/professor-form"
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Mail, 
-  Edit, 
-  Trash2, 
+import {
+  Users,
+  Search,
+  Plus,
+  Mail,
+  Edit,
+  Trash2,
   Calendar,
   MessageCircle,
   Clock,
-  CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Wand2
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import EmailGenerator from "@/components/email-generator"
 
 const statusConfig = {
   "not-contacted": {
@@ -62,22 +63,28 @@ const statusFilters = [
   { label: "Rejected", value: "rejected" },
 ]
 
-export default function ProfessorsPage() {
+interface ProfessorsPageProps {
+  professors: any[]
+  setProfessors: (professors: any[]) => void
+  searchQuery: string
+}
+
+export default function ProfessorsPage({ professors: propProfessors, setProfessors: setPropProfessors, searchQuery }: ProfessorsPageProps) {
   const { user, loading: userLoading } = useUser()
-  const [professors, setProfessors] = useState<any[]>([])
-  const [filteredProfessors, setFilteredProfessors] = useState<any[]>([])
-  const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
   const [openForm, setOpenForm] = useState(false)
   const [editingProfessor, setEditingProfessor] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [emailGeneratorOpen, setEmailGeneratorOpen] = useState(false)
+  const [selectedProfessor, setSelectedProfessor] = useState<any>(null)
+  const [localSearch, setLocalSearch] = useState("")
 
   const fetchProfessors = async () => {
     if (!user?.id) {
       setLoading(false)
       return
     }
-    
+
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -94,7 +101,7 @@ export default function ProfessorsPage() {
           variant: "destructive",
         })
       } else {
-        setProfessors(data ?? [])
+        setPropProfessors(data ?? [])
       }
     } catch (error) {
       console.error("Error:", error)
@@ -131,6 +138,11 @@ export default function ProfessorsPage() {
     window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank')
   }
 
+  const openEmailGenerator = (professor: any) => {
+    setSelectedProfessor(professor)
+    setEmailGeneratorOpen(true)
+  }
+
   const openEdit = (prof: any) => {
     setEditingProfessor(prof)
     setOpenForm(true)
@@ -146,19 +158,33 @@ export default function ProfessorsPage() {
     setOpenForm(true)
   }
 
-  const filterAndSearch = () => {
-    let filtered = professors.filter((p) => {
-      const matchSearch =
-        p.name?.toLowerCase().includes(search.toLowerCase()) ||
-        p.university?.toLowerCase().includes(search.toLowerCase()) ||
-        p.department?.toLowerCase().includes(search.toLowerCase()) ||
-        p.email?.toLowerCase().includes(search.toLowerCase())
-      
-      const matchFilter = filter === "all" || p.contact_status === filter
-      return matchSearch && matchFilter
+  const isGlobalSearchActive = Boolean(searchQuery?.trim())
+  const externalQuery = searchQuery?.trim().toLowerCase() ?? ""
+  const internalQuery = localSearch.trim().toLowerCase()
+  const searchTerm = externalQuery || internalQuery
+
+  const filteredProfessors = useMemo(() => {
+    const normaliseValue = (value: unknown) => {
+      if (!value) return ""
+      if (Array.isArray(value)) return value.join(" ").toLowerCase()
+      return String(value).toLowerCase()
+    }
+    const matchesSearch = (value: unknown) => normaliseValue(value).includes(searchTerm)
+    return propProfessors.filter((p) => {
+      const matchesFilter = filter === "all" || p.contact_status === filter
+      if (!matchesFilter) return false
+
+      if (!searchTerm) return true
+
+      return (
+        matchesSearch(p.name) ||
+        matchesSearch(p.email) ||
+        matchesSearch(p.university) ||
+        matchesSearch(p.department) ||
+        matchesSearch(p.research_interests)
+      )
     })
-    setFilteredProfessors(filtered)
-  }
+  }, [propProfessors, filter, searchTerm])
 
   const getFollowUpStatus = (professor: any) => {
     if (professor.contact_status === "contacted" && professor.mailing_date) {
@@ -173,11 +199,11 @@ export default function ProfessorsPage() {
   }
 
   const getStats = () => {
-    const total = professors.length
-    const contacted = professors.filter(p => p.contact_status === "contacted").length
-    const replied = professors.filter(p => p.contact_status === "replied").length
-    const meetings = professors.filter(p => p.contact_status === "meeting-scheduled").length
-    const needFollowUp = professors.filter(p => getFollowUpStatus(p).needsFollowUp).length
+    const total = propProfessors.length
+    const contacted = propProfessors.filter(p => p.contact_status === "contacted").length
+    const replied = propProfessors.filter(p => p.contact_status === "replied").length
+    const meetings = propProfessors.filter(p => p.contact_status === "meeting-scheduled").length
+    const needFollowUp = propProfessors.filter(p => getFollowUpStatus(p).needsFollowUp).length
 
     return { total, contacted, replied, meetings, needFollowUp }
   }
@@ -193,12 +219,25 @@ export default function ProfessorsPage() {
   }, [user])
 
   useEffect(() => {
-    filterAndSearch()
-  }, [search, filter, professors])
+    if (!isGlobalSearchActive) return
+    setLocalSearch("")
+  }, [isGlobalSearchActive])
 
-  const stats = getStats()
+  // Add timeout for loading state
+  useEffect(() => {
+    if (loading && user === undefined) {
+      const timeout = setTimeout(() => {
+        console.log('Professors page loading timeout - refreshing')
+        setLoading(false)
+      }, 8000) // 8 second timeout
 
-  if (loading) {
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, user])
+
+  const stats = useMemo(() => getStats(), [propProfessors])
+
+  if (userLoading || (loading && user === undefined)) {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-center py-12">
@@ -298,31 +337,42 @@ export default function ProfessorsPage() {
         </Card>
       </div>
 
-      {/* Search and Filters */}
+      {/* Filters */}
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search professors, universities, departments..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 max-w-md"
-          />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap gap-2">
+            {statusFilters.map((statusFilter) => (
+              <Button
+                key={statusFilter.value}
+                variant={filter === statusFilter.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(statusFilter.value)}
+                className="text-sm"
+              >
+                {statusFilter.label}
+              </Button>
+            ))}
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              value={isGlobalSearchActive ? searchQuery : localSearch}
+              onChange={(e) => !isGlobalSearchActive && setLocalSearch(e.target.value)}
+              placeholder={
+                isGlobalSearchActive
+                  ? `Filtering by "${searchQuery}"`
+                  : "Search by name, email, or university..."
+              }
+              disabled={isGlobalSearchActive}
+              className="pl-9 text-sm"
+            />
+          </div>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          {statusFilters.map((statusFilter) => (
-            <Button
-              key={statusFilter.value}
-              variant={filter === statusFilter.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(statusFilter.value)}
-              className="text-sm"
-            >
-              {statusFilter.label}
-            </Button>
-          ))}
-        </div>
+        {isGlobalSearchActive && (
+          <p className="text-xs text-purple-600">
+            Global search is active. Clear the main search to use the professor-specific search bar.
+          </p>
+        )}
       </div>
 
       {/* Professors List */}
@@ -331,14 +381,14 @@ export default function ProfessorsPage() {
           <CardContent className="text-center py-12">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {professors.length === 0 ? "No professors yet" : "No professors found"}
+              {propProfessors.length === 0 ? "No professors yet" : "No professors found"}
             </h3>
             <p className="text-gray-500 mb-4">
-              {professors.length === 0 
+              {propProfessors.length === 0 
                 ? "Get started by adding your first professor." 
                 : "Try adjusting your search or filters."}
             </p>
-            {professors.length === 0 && (
+            {propProfessors.length === 0 && (
               <Button onClick={openNewProfessorForm} className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Professor
@@ -406,30 +456,45 @@ export default function ProfessorsPage() {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => sendEmail(professor.email, professor.name)}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Mail className="h-4 w-4 mr-1" />
-                      Email
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEdit(professor)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDelete(professor.id, professor.name)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2 pt-2">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => openEmailGenerator(professor)}
+                        className="flex-1 bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        AI Email
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendEmail(professor.email, professor.name)}
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        Quick Email
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEdit(professor)}
+                        className="flex-1"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(professor.id, professor.name)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -445,6 +510,18 @@ export default function ProfessorsPage() {
         editingProfessor={editingProfessor}
         refresh={fetchProfessors}
       />
+
+      {/* AI Email Generator Modal */}
+      {selectedProfessor && (
+        <EmailGenerator
+          open={emailGeneratorOpen}
+          onClose={() => {
+            setEmailGeneratorOpen(false)
+            setSelectedProfessor(null)
+          }}
+          professor={selectedProfessor}
+        />
+      )}
     </div>
   )
 }
