@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { useUser } from "@/context/UserProvider"
+import { useUser } from "@/components/UserProvider"
 import DocumentUploadForm from "@/components/forms/document-upload-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -34,8 +34,24 @@ export default function DocumentsPage() {
   }
 
   useEffect(() => {
-    if (user) fetchDocuments()
+    if (user?.id) {
+      fetchDocuments()
+    } else if (user === null) {
+      setLoading(false)
+    }
   }, [user])
+
+  // Add timeout for loading state
+  useEffect(() => {
+    if (loading && user === undefined) {
+      const timeout = setTimeout(() => {
+        console.log('Documents page loading timeout')
+        setLoading(false)
+      }, 8000)
+
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, user])
 
   return (
     <div className="p-6 space-y-6">

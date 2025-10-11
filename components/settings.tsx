@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useUser } from "@/components/UserProvider"
+import { db } from "@/lib/supabase"
 import { 
   SettingsIcon, 
   User, 
@@ -29,13 +30,13 @@ import {
   Loader2
 } from "lucide-react"
 import { toast } from "sonner"
-import { log } from "console"
 
 export default function SettingsPage() {
   const { user, profile, loading: userLoading, updateProfile, uploadAvatar, deleteAvatar,addResearchInterest, removeResearchInterest, refreshProfile } = useUser()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
   const [newInterest, setNewInterest] = useState("")
   const [formData, setFormData] = useState({
@@ -154,6 +155,145 @@ export default function SettingsPage() {
     if (e.key === 'Enter') {
       e.preventDefault()
       addResearchInterest()
+    }
+  }
+
+  const handleExportData = async () => {
+    if (!user?.id) {
+      toast.error("Unable to export data without an authenticated user.")
+      return
+    }
+
+    setExporting(true)
+    try {
+      const [universitiesData, professorsData] = await Promise.all([
+        db.getUniversities(user.id),
+        db.getProfessors(user.id),
+      ])
+
+      const XLSXModule = await import("xlsx")
+      const XLSX = XLSXModule.default || XLSXModule
+      const workbook = XLSX.utils.book_new()
+
+      const formattedUniversities = (universitiesData || []).map((uni) => ({
+        Name: uni.name,
+        Program: uni.program,
+        Degree: uni.degree,
+        Location: uni.location,
+        Ranking: uni.ranking,
+        "Application Fee": uni.application_fee,
+        Deadline: uni.deadline,
+        Status: uni.status,
+        Requirements: (uni.requirements || []).join(", "),
+        "GRE Required": uni.gre_required ? "Yes" : "No",
+        "GRE Score": uni.gre_score || "",
+        "SOP Length": uni.sop_length,
+        "Funding Available": uni.funding_available ? "Yes" : "No",
+        "Funding Types": (uni.funding_types || []).join(", "),
+        "Funding Amount": uni.funding_amount || "",
+        "Acceptance Funding Status": uni.acceptance_funding_status || "",
+        Notes: uni.notes || "",
+      }))
+
+      const formattedProfessors = (professorsData || []).map((prof) => ({
+        Name: prof.name,
+        Title: prof.title,
+        University: prof.university,
+        Department: prof.department,
+        Email: prof.email,
+        "Contact Date": prof.mailing_date
+          ? new Date(prof.mailing_date).toLocaleString()
+          : prof.last_contact
+            ? new Date(prof.last_contact).toLocaleString()
+            : "",
+        Status: (() => {
+          switch (prof.contact_status) {
+            case "replied":
+              return "Replied"
+            case "rejected":
+              return "Rejected"
+            case "meeting-scheduled":
+              return "Meeting Scheduled"
+            case "contacted":
+              return "Contacted"
+            case "not-contacted":
+              return "Not Contacted"
+            default:
+              return prof.contact_status || ""
+          }
+        })(),
+        "Response Time": prof.response_time || "",
+      }))
+
+      const universityHeaders = [
+        "Name",
+        "Program",
+        "Degree",
+        "Location",
+        "Ranking",
+        "Application Fee",
+        "Deadline",
+        "Status",
+        "Requirements",
+        "GRE Required",
+        "GRE Score",
+        "SOP Length",
+        "Funding Available",
+        "Funding Types",
+        "Funding Amount",
+        "Acceptance Funding Status",
+        "Notes",
+      ]
+      const professorHeaders = [
+        "Name",
+        "Title",
+        "University",
+        "Department",
+        "Email",
+        "Contact Date",
+        "Status",
+        "Response Time",
+      ]
+
+      const universitySheet = XLSX.utils.json_to_sheet(formattedUniversities, {
+        header: universityHeaders,
+        skipHeader: false,
+      })
+      if (!formattedUniversities.length) {
+        XLSX.utils.sheet_add_aoa(universitySheet, [["No university records found"]], { origin: "A2" })
+      }
+
+      const professorSheet = XLSX.utils.json_to_sheet(formattedProfessors, {
+        header: professorHeaders,
+        skipHeader: false,
+      })
+      if (!formattedProfessors.length) {
+        XLSX.utils.sheet_add_aoa(professorSheet, [["No professor records found"]], { origin: "A2" })
+      }
+
+      XLSX.utils.book_append_sheet(workbook, universitySheet, "University Applications")
+      XLSX.utils.book_append_sheet(workbook, professorSheet, "Professors")
+
+      const workbookArray = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+      const blob = new Blob([workbookArray], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+      const url = URL.createObjectURL(blob)
+      const downloadLink = document.createElement("a")
+      const timestamp = new Date().toISOString().split("T")[0]
+      downloadLink.href = url
+      downloadLink.download = `phdtrack-data-${timestamp}.xlsx`
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      document.body.removeChild(downloadLink)
+      URL.revokeObjectURL(url)
+
+      toast.success("Your data export is ready!")
+    } catch (error) {
+      console.error("Error exporting data:", error)
+      toast.error("Failed to export data. Please try again.")
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -282,16 +422,18 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+          {/*
           <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
-            <Textarea 
-              id="bio" 
+            <Textarea
+              id="bio"
               value={formData.bio}
               onChange={(e) => handleInputChange('bio', e.target.value)}
               placeholder="Tell us about yourself..."
               rows={3}
             />
           </div>
+          */}
         </CardContent>
       </Card>
 
@@ -404,7 +546,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Links */}
+
+      {/* Links
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -435,6 +578,7 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      */}
 
       {/* Save Button */}
       <div className="flex justify-end">
@@ -458,7 +602,36 @@ export default function SettingsPage() {
 
       </div>
 
-      {/* Notification Settings */}
+      {/*
+      <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Bell className="h-5 w-5 text-blue-600" />
+              <span>Your Data</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="flex items-center justify-center space-x-2 bg-white hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export Data</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center justify-center space-x-2 bg-white hover:bg-green-50 hover:border-green-400 transition-all duration-200"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Import Data</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        */}
+
+      {/* Notification Settings
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -529,8 +702,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      */}
 
-      {/* Appearance */}
+      {/* Appearance
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -548,39 +722,42 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+      */}
 
       {/* Data Management */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5 text-primary-500" />
-            <span>Data Management</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="flex items-center space-x-2 bg-transparent">
-              <Download className="h-4 w-4" />
-              <span>Export Data</span>
-            </Button>
-            <Button variant="outline" className="flex items-center space-x-2 bg-transparent">
-              <Upload className="h-4 w-4" />
-              <span>Import Data</span>
-            </Button>
-          </div>
-          <div className="border-t pt-4">
-            <Button variant="destructive" className="flex items-center space-x-2">
-              <Trash2 className="h-4 w-4" />
-              <span>Delete All Data</span>
-            </Button>
-            <p className="text-xs text-gray-500 mt-2">
-              This action cannot be undone. All your data will be permanently deleted.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+  <CardContent className="space-y-10 pt-6">
+    <div className="flex justify-center">
+      <Button
+        type="button"
+        onClick={handleExportData}
+        disabled={exporting}
+        className="flex items-center gap-3 rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 via-white to-primary-50 px-8 py-5 text-sm font-semibold text-primary-700 shadow-sm transition-all duration-200 hover:-translate-y-[1px] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {exporting ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Download className="h-5 w-5" />
+        )}
+        <span>{exporting ? "Preparing export..." : "Export Your Data"}</span>
+      </Button>
+    </div>
+    {/* Data Management
+    <div className="border-t pt-4">
+      <Button variant="destructive" className="flex items-center space-x-2">
+        <Trash2 className="h-4 w-4" />
+        <span>Delete All Data</span>
+      </Button>
+      <p className="text-xs text-gray-500 mt-2">
+        This action cannot be undone. All your data will be permanently deleted.
+      </p>
+    </div>
+    */}
+  </CardContent>
+</Card>
 
-      {/* Integration Settings */}
+
+      {/* Integration Settings
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -615,42 +792,66 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
+       */}
       {/* About */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <SettingsIcon className="h-5 w-5 text-primary-500" />
-            <span>About</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Version</span>
-            <span>2.1.0</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Last Updated</span>
-            <span>December 2024</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>User ID</span>
-            <span className="font-mono text-xs">{user?.id}</span>
-          </div>
-          <div className="pt-4 space-y-2">
-            <Button variant="outline" className="w-full bg-transparent">
-              Privacy Policy
-            </Button>
-            <Button variant="outline" className="w-full bg-transparent">
-              Terms of Service
-            </Button>
-            <Button variant="outline" className="w-full bg-transparent">
-              Contact Support
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <SettingsIcon className="h-5 w-5 text-purple-600" />
+              <span>About</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Version</span>
+              <span className="font-semibold">2.1.0</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Last Updated</span>
+              <span className="font-semibold">October 2025</span>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700">Developer</h3>
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border border-purple-100">
+                <div className="flex items-center space-x-3 mb-3">
+                  <img
+                    src="/salam.png"
+                    alt="Abdus Salam"
+                    className="h-12 w-12 rounded-full object-cover border-2 border-purple-300 shadow-sm"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-900">Abdus Salam</p>
+                    <p className="text-xs text-gray-700">Software Engineer | Researcher</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full bg-white hover:bg-purple-50 hover:border-purple-400 transition-all duration-200 font-medium"
+                  onClick={() => window.open('https://salam35.netlify.app', '_blank')}
+                >
+                  <span className="mr-2">🌐</span>
+                  Visit Portfolio
+                </Button>
+              </div>
+            </div>
+
+            <div className="pt-2 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-sm"
+              >
+                Privacy Policy
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-sm"
+              >
+                Terms of Service
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
     </div>
   )
 }
-

@@ -106,7 +106,9 @@ export default function Applications({ universities, setUniversities }: Applicat
     setShowForm(true)
   }
 
-  const getStatusColor = (status: University["status"]) => {
+  const getStatusColor = (status: University["status"], fundingStatus?: string) => {
+    if (status === "accepted" && fundingStatus === "with-funding") return "bg-green-600"
+    if (status === "accepted" && fundingStatus === "without-funding") return "bg-green-400"
     switch (status) {
       case "not-started": return "bg-gray-500"
       case "in-progress": return "bg-blue-500"
@@ -118,6 +120,12 @@ export default function Applications({ universities, setUniversities }: Applicat
       case "waitlisted": return "bg-yellow-600"
       default: return "bg-gray-500"
     }
+  }
+
+  const getStatusLabel = (status: University["status"], fundingStatus?: string) => {
+    if (status === "accepted" && fundingStatus === "with-funding") return "Accepted (Funded)"
+    if (status === "accepted" && fundingStatus === "without-funding") return "Accepted (No Funding)"
+    return status.replace("-", " ")
   }
 
   const getPriorityColor = (priority: University["priority"]) => {
@@ -237,15 +245,7 @@ export default function Applications({ universities, setUniversities }: Applicat
 
       {/* Search and Filters */}
       <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search applications..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+
 
         <div className="flex space-x-2 overflow-x-auto pb-2">
           <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -307,8 +307,8 @@ export default function Applications({ universities, setUniversities }: Applicat
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Badge className={`${getStatusColor(university.status)} text-white`}>
-                  {university.status.replace("-", " ")}
+                <Badge className={`${getStatusColor(university.status, university.acceptance_funding_status)} text-white`}>
+                  {getStatusLabel(university.status, university.acceptance_funding_status)}
                 </Badge>
                 <Badge className={getPriorityColor(university.priority)}>{university.priority} priority</Badge>
               </div>
@@ -347,7 +347,18 @@ export default function Applications({ universities, setUniversities }: Applicat
                 </div>
               )}
 
-              {university.funding_available && (
+              {university.status === "accepted" && university.acceptance_funding_status && (
+                <div className="text-sm">
+                  <span className="font-medium">Acceptance Funding: </span>
+                  <span className={university.acceptance_funding_status === "with-funding" ? "text-green-600 font-semibold" : "text-orange-600"}>
+                    {university.acceptance_funding_status === "with-funding" ? "Funded" :
+                     university.acceptance_funding_status === "without-funding" ? "Not Funded" :
+                     university.acceptance_funding_status === "pending" ? "Pending" : "Unknown"}
+                  </span>
+                </div>
+              )}
+
+              {university.status !== "accepted" && university.funding_available && (
                 <div className="text-sm">
                   <span className="font-medium">Funding: </span>
                   <span className="text-green-600">{university.funding_amount || "Available"}</span>

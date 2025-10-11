@@ -3,42 +3,81 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { useUser } from "@/components/UserProvider"
 
 export default function SignupPage() {
+  const { signUp, signInWithGoogle } = useUser()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const router = useRouter()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
+    setSuccess("")
 
     if (password !== confirmPassword) {
-      alert("Passwords don't match")
+      setError("Passwords don't match")
       return
     }
 
     if (!agreedToTerms) {
-      alert("Please agree to the terms and conditions")
+      setError("Please agree to the terms and conditions")
       return
     }
 
     setLoading(true)
 
-    const { error } = await supabase.auth.signUp({ email, password })
-
-    if (error) {
-      alert(error.message)
-    } else {
-      alert("Check your email for the confirmation link!")
-      router.push("/login")
+    try {
+      await signUp(email, password)
+      setSuccess("Account created! Please check your email to verify your account.")
+      setTimeout(() => router.push("/login"), 2000)
+    } catch (error: any) {
+      setError(error.message || "Failed to create account")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
+
+  const handleGoogleSignUp = async () => {
+    setError("")
+    setSuccess("")
+    setOauthLoading(true)
+    try {
+      await signInWithGoogle()
+    } catch (err: any) {
+      console.error(err)
+      setError(err?.message || "Failed to continue with Google")
+      setOauthLoading(false)
+    }
+  }
+
+  const GoogleIcon = () => (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M22.56 12.26c0-.78-.07-1.53-.2-2.26H12v4.27h5.9a5.04 5.04 0 0 1-2.2 3.31v2.74h3.56c2.08-1.92 3.3-4.74 3.3-8.06Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.56-2.74c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.28-1.93-6.15-4.53H2.18v2.84A10.98 10.98 0 0 0 12 23Z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.85 14.14a6.57 6.57 0 0 1 0-4.28V7.02H2.18a11 11 0 0 0 0 9.96l3.67-2.84Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.2 1.66l3.15-3.15C17.46 1.36 14.97 0 12 0 7.32 0 3.35 2.69 2.18 6.62l3.67 2.84C6.72 7.3 9.14 5.38 12 5.38Z"
+        fill="#EA4335"
+      />
+    </svg>
+  )
 
   const getPasswordStrength = (password: string) => {
     if (password.length < 6) return { strength: 0, label: "Too short" }
@@ -133,6 +172,18 @@ export default function SignupPage() {
               )}
             </div>
 
+            {error && (
+              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="text-green-600 text-sm text-center bg-green-50 p-3 rounded-lg">
+                {success}
+              </div>
+            )}
+
             <div className="flex items-start">
               <input
                 id="terms"
@@ -182,7 +233,17 @@ export default function SignupPage() {
           </div>
 
           {/* Social Login */}
-
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              disabled={oauthLoading}
+              className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-60"
+            >
+              <GoogleIcon />
+              {oauthLoading ? "Redirecting..." : "Continue with Google"}
+            </button>
+          </div>
 
           {/* Login link */}
           <div className="text-center">
