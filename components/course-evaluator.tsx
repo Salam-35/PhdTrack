@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Upload, Wand2, Trash2, Plus } from "lucide-react"
+import { db } from "@/lib/supabase"
+import { useUser } from "@/components/UserProvider"
 
 type Course = {
   id: string
@@ -132,12 +134,16 @@ function computeCGPA(courses: Course[], gradeMap: GradeMap): { cgpa: number; tot
 }
 
 export default function CourseEvaluator() {
+  const { user } = useUser()
   const [courses, setCourses] = useState<Course[]>([])
   const [gradeMap, setGradeMap] = useState<GradeMap>({ ...defaultGradeMap })
   const [file, setFile] = useState<File | null>(null)
   const [transcriptText, setTranscriptText] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [saveName, setSaveName] = useState("")
+  const [saveLevel, setSaveLevel] = useState("Bachelor")
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const stored = loadStored()
@@ -152,6 +158,19 @@ export default function CourseEvaluator() {
   }, [courses, gradeMap])
 
   const { cgpa, totalCredits } = useMemo(() => computeCGPA(courses, gradeMap), [courses, gradeMap])
+
+  const sortedCourses = useMemo(() => {
+    const getNum = (code: string) => {
+      const m = (code || '').match(/(\d{4})/)
+      return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER
+    }
+    return [...courses].sort((a, b) => {
+      const na = getNum(a.code)
+      const nb = getNum(b.code)
+      if (na !== nb) return na - nb
+      return (a.code || '').localeCompare(b.code || '')
+    })
+  }, [courses])
 
   const handleFileChange = (f: File | null) => {
     setFile(f)
@@ -268,6 +287,34 @@ Transcript:\n${text.slice(0, 18000)}`
     setGradeMap(prev => ({ ...prev, [nextKey.toUpperCase()]: 0 }))
   }
 
+  async function saveToDatabase() {
+    if (!user?.id) { setMessage('Please log in to save.'); return }
+    if (!saveName.trim()) { setMessage('Enter a name for this evaluation.'); return }
+    if (courses.length === 0) { setMessage('No courses to save.'); return }
+    setSaving(true)
+    setMessage(null)
+    try {
+      const evaluation = await db.createCourseEvaluation({ name: saveName.trim(), level: saveLevel })
+      // Persist courses
+      for (const c of courses) {
+        await db.addEvaluationCourse(evaluation.id, {
+          code: c.code,
+          name: c.name,
+          grade: c.grade.toUpperCase(),
+          credit_hours: Number(c.creditHours) || 0,
+        })
+      }
+      setMessage(`Saved as "${evaluation.name}". Edit it under Saved Course Evaluations below.`)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('course-eval:updated', { detail: { evaluationId: evaluation.id } }))
+      }
+    } catch (e: any) {
+      setMessage(`Save failed: ${e?.message || e}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <Card className="shadow-lg">
       <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b">
@@ -301,6 +348,29 @@ Transcript:\n${text.slice(0, 18000)}`
             Extract Courses with AI
           </Button>
           {message && <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">{message}</div>}
+        </div>
+
+        {/* Save to Database */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+          <div>
+            <Label>Save as Evaluation Name</Label>
+            <Input placeholder="e.g., RUET Bachelor Transcript" value={saveName} onChange={(e) => setSaveName(e.target.value)} />
+          </div>
+          <div>
+            <Label>Level</Label>
+            <select className="border rounded h-10 px-2 w-full" value={saveLevel} onChange={(e) => setSaveLevel(e.target.value)}>
+              <option value="Bachelor">Bachelor</option>
+              <option value="Masters">Masters</option>
+              <option value="PhD">PhD</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <Button onClick={saveToDatabase} disabled={saving || !user?.id || !saveName.trim() || courses.length === 0} className="w-full">
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Save to Database
+            </Button>
+          </div>
         </div>
 
         {/* Grade Map */}
@@ -338,7 +408,7 @@ Transcript:\n${text.slice(0, 18000)}`
                   </tr>
                 </thead>
                 <tbody>
-                  {courses.map((c) => (
+                  {sortedCourses.map((c) => (
                     <tr key={c.id} className="border-t">
                       <td className="px-3 py-2">
                         <input type="checkbox" checked={c.included} onChange={(e) => updateCourse(c.id, { included: e.target.checked })} />

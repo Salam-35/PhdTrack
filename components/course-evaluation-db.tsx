@@ -51,7 +51,6 @@ export default function CourseEvaluationDB() {
   const [courses, setCourses] = useState<CourseEvaluationCourse[]>([])
   const [includeMap, setIncludeMap] = useState<Record<string, boolean>>({})
   const [gradeMap, setGradeMap] = useState<GradeMap>({ ...defaultGradeMap })
-  const [newEval, setNewEval] = useState({ name: "", level: "Bachelor" })
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -68,6 +67,25 @@ export default function CourseEvaluationDB() {
         setLoading(false)
       }
     })()
+  }, [user?.id])
+
+  // Listen for external updates (e.g., saved from local extractor)
+  useEffect(() => {
+    function onUpdated(e: any) {
+      const evalId = e?.detail?.evaluationId as string | undefined
+      ;(async () => {
+        setLoading(true)
+        try {
+          const list = await db.getCourseEvaluations(user?.id)
+          setEvaluations(list)
+          if (evalId) setSelectedId(evalId)
+        } finally {
+          setLoading(false)
+        }
+      })()
+    }
+    window.addEventListener('course-eval:updated', onUpdated as any)
+    return () => window.removeEventListener('course-eval:updated', onUpdated as any)
   }, [user?.id])
 
   useEffect(() => {
@@ -89,18 +107,20 @@ export default function CourseEvaluationDB() {
 
   const { cgpa, totalCredits } = useMemo(() => computeCGPA(courses, includeMap, gradeMap), [courses, includeMap, gradeMap])
 
-  const createEvaluation = async () => {
-    if (!newEval.name.trim()) return
-    setLoading(true)
-    try {
-      const created = await db.createCourseEvaluation({ name: newEval.name.trim(), level: newEval.level })
-      setEvaluations(prev => [created, ...prev])
-      setSelectedId(created.id)
-      setNewEval({ name: "", level: "Bachelor" })
-    } finally {
-      setLoading(false)
+  const sortedCourses = useMemo(() => {
+    const getNum = (code: string) => {
+      const m = (code || '').match(/(\d{4})/)
+      return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER
     }
-  }
+    return [...courses].sort((a, b) => {
+      const na = getNum(a.code)
+      const nb = getNum(b.code)
+      if (na !== nb) return na - nb
+      return (a.code || '').localeCompare(b.code || '')
+    })
+  }, [courses])
+
+  // Creation UI removed; use the extractor's Save to Database instead
 
   const updateEvalMeta = async (id: string, patch: Partial<Pick<CourseEvaluation, 'name' | 'level'>>) => {
     setEvaluations(prev => prev.map(e => e.id === id ? { ...e, ...patch } as CourseEvaluation : e))
@@ -238,22 +258,7 @@ export default function CourseEvaluationDB() {
       <CardContent className="p-6 space-y-6">
         {/* Create / List Evaluations */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="space-y-3">
-            <Label>New Evaluation</Label>
-            <Input placeholder="e.g., RUET Bachelor Transcript" value={newEval.name} onChange={(e) => setNewEval(prev => ({ ...prev, name: e.target.value }))} />
-            <Select value={newEval.level} onValueChange={(v) => setNewEval(prev => ({ ...prev, level: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Bachelor">Bachelor</SelectItem>
-                <SelectItem value="Masters">Masters</SelectItem>
-                <SelectItem value="PhD">PhD</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={createEvaluation} disabled={loading || !newEval.name.trim()}><Plus className="h-4 w-4 mr-2" /> Create</Button>
-          </div>
-
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <Label>Evaluations</Label>
             <div className="flex flex-wrap gap-2 mt-2">
               {evaluations.map(ev => (
@@ -348,7 +353,7 @@ export default function CourseEvaluationDB() {
                   </tr>
                 </thead>
                 <tbody>
-                  {courses.map((c) => (
+                  {sortedCourses.map((c) => (
                     <tr key={c.id} className="border-t">
                       <td className="px-3 py-2">
                         <input type="checkbox" checked={includeMap[c.id] !== false} onChange={(e) => setIncludeMap(prev => ({ ...prev, [c.id]: e.target.checked }))} />
