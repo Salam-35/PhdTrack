@@ -386,6 +386,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Calendar, Clock, CheckCircle, AlertTriangle, Plus, ChevronRight, Target,
   Flag, Users, FileText, Mail, Video, Edit2, Trash2, ExternalLink, 
@@ -412,7 +413,6 @@ export default function Timeline({
   onEditClick,
   onDeleteClick 
 }: TimelineProps) {
-  const [viewMode, setViewMode] = useState<"week" | "month" | "all">("all")
   const [filterCategory, setFilterCategory] = useState("all")
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     deadline: true,
@@ -423,21 +423,11 @@ export default function Timeline({
   })
 
   const isToday = (date: string) => new Date(date).toDateString() === new Date().toDateString()
-  const isThisWeek = (date: string) => {
-    const today = new Date()
-    const eventDate = new Date(date)
-    const start = new Date(today.setDate(today.getDate() - today.getDay()))
-    const end = new Date(today.setDate(start.getDate() + 6))
-    return eventDate >= start && eventDate <= end
-  }
 
+  const allowedCategories = new Set(["application", "professor", "interview", "document"]) as Set<TimelineEvent["category"]>
   const filteredEvents = timelineEvents
-    .filter(event => {
-      const matchCategory = filterCategory === "all" || event.category === filterCategory
-      if (viewMode === "week") return matchCategory && (isThisWeek(event.date) || event.status === "today")
-      if (viewMode === "month") return matchCategory && new Date(event.date).getMonth() === new Date().getMonth()
-      return matchCategory
-    })
+    .filter(event => allowedCategories.has(event.category))
+    .filter(event => filterCategory === "all" || event.category === filterCategory)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   // Group events by type
@@ -566,18 +556,20 @@ export default function Timeline({
         </CardContent></Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {["week", "month", "all"].map((mode) => (
-          <Button key={mode} variant={viewMode === mode ? "default" : "outline"} size="sm" onClick={() => setViewMode(mode as any)} className="capitalize">
-            {mode}
-          </Button>
-        ))}
-        {["all", "application", "professor", "interview", "test", "decision", "document"].map((cat) => (
-          <Button key={cat} variant={filterCategory === cat ? "default" : "outline"} size="sm" onClick={() => setFilterCategory(cat)} className="capitalize">
-            {cat}
-          </Button>
-        ))}
+      {/* Refinement Dropdown */}
+      <div className="w-56">
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger>
+            <SelectValue placeholder="Refine by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="application">Application</SelectItem>
+            <SelectItem value="professor">Professor</SelectItem>
+            <SelectItem value="interview">Interview</SelectItem>
+            <SelectItem value="document">Document</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Timeline Events by Type */}

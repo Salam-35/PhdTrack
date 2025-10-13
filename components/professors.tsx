@@ -78,6 +78,8 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
   const [emailGeneratorOpen, setEmailGeneratorOpen] = useState(false)
   const [selectedProfessor, setSelectedProfessor] = useState<any>(null)
   const [localSearch, setLocalSearch] = useState("")
+  const [now, setNow] = useState(new Date())
+  const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
 
   const fetchProfessors = async () => {
     if (!user?.id) {
@@ -218,6 +220,101 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
     // If user is undefined, we're still loading the auth state
   }, [user])
 
+  // Global tick every 10 minutes to refresh local-time text
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 600000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Attempt one-time timezone backfill for professors missing timezone
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_OPENAI_API_KEY
+    if (!key) return // No key configured; skip auto-detect
+    const missing = (propProfessors || []).filter(p => !p.timezone && p.university && !resolvingIds.has(p.id))
+    if (missing.length === 0) return
+
+    let cancelled = false
+    const ids = new Set(resolvingIds)
+
+    async function resolveAll() {
+      for (const prof of missing) {
+        if (cancelled) break
+        ids.add(prof.id)
+        setResolvingIds(new Set(ids))
+        try {
+          const tz = await resolveTimezoneWithOpenAI(prof.university, prof.name, key)
+          if (!tz) continue
+          // Persist to DB
+          const { error } = await supabase
+            .from("professors")
+            .update({ timezone: tz })
+            .eq("id", prof.id)
+          if (error) {
+            console.warn("Failed to persist timezone (ensure 'timezone' column exists):", error)
+            continue
+          }
+          // Update local state for immediate UI reflection
+          setPropProfessors(prev => prev.map(p => p.id === prof.id ? { ...p, timezone: tz } : p))
+        } catch (e) {
+          console.warn("Timezone resolve/update failed for", prof.id, e)
+        }
+      }
+    }
+
+    resolveAll()
+    return () => { cancelled = true }
+  }, [propProfessors, setPropProfessors, resolvingIds])
+
+  function formatLocalTime(tz?: string): string | null {
+    if (!tz) return null
+    try {
+      return now.toLocaleString(undefined, {
+        timeZone: tz,
+        hour: "2-digit",
+        minute: "2-digit",
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+      })
+    } catch {
+      return null
+    }
+  }
+
+  async function resolveTimezoneWithOpenAI(university: string, professorName: string, key: string): Promise<string | null> {
+    try {
+      const prompt = `Given the university name below, return only the IANA time zone identifier for its primary campus location.\n- Return just the identifier like America/New_York or Europe/London.\n- If multiple campuses exist, pick the most common main campus.\n- Do not include extra text or code blocks.\n\nUniversity: ${university}${professorName ? `\nProfessor: ${professorName}` : ""}`
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Return only a valid IANA time zone identifier.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0,
+          max_tokens: 16,
+        })
+      })
+      if (!resp.ok) return null
+      const data = await resp.json()
+      let content: string = data.choices?.[0]?.message?.content || ''
+      content = content.trim().replace(/^[`\s]*|[`\s]*$/g, '')
+      // Extract plausible tz token
+      const candidate = content.split(/\s|\n/).find((tok: string) => tok.includes('/')) || content
+      const cleaned = candidate.replace(/^["']|["']$/g, '')
+      // Validate IANA
+      new Intl.DateTimeFormat("en-US", { timeZone: cleaned }).format(new Date())
+      return cleaned
+    } catch {
+      return null
+    }
+  }
+
   useEffect(() => {
     if (!isGlobalSearchActive) return
     setLocalSearch("")
@@ -266,7 +363,7 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Professor Management</h1>
+          <h1 className="text-xl font-bold text-gray-900">Professor Management</h1>
           <p className="text-gray-600 mt-1">Track and manage your potential supervisors</p>
         </div>
         <Button
@@ -353,6 +450,8 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
               </Button>
             ))}
           </div>
+
+          {/*
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -367,6 +466,7 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
               className="pl-9 text-sm"
             />
           </div>
+          */}
         </div>
         {isGlobalSearchActive && (
           <p className="text-xs text-purple-600">
@@ -403,14 +503,18 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
             const statusColor = statusConfig[professor.contact_status as keyof typeof statusConfig]?.color || "bg-gray-100 text-gray-800"
             const statusLabel = statusConfig[professor.contact_status as keyof typeof statusConfig]?.label || professor.contact_status
             const followUpStatus = getFollowUpStatus(professor)
+            const localTime = formatLocalTime(professor.timezone)
 
             return (
               <Card key={professor.id} className={`relative ${followUpStatus.needsFollowUp ? 'border-red-300 bg-red-50/50' : ''}`}>
-                {followUpStatus.needsFollowUp && (
+
+
+                {/* {followUpStatus.needsFollowUp && (
                   <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
                     Follow up needed!
                   </div>
                 )}
+                */}
                 
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -424,10 +528,17 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
                         <p className="text-sm text-gray-600">{professor.email}</p>
                       </div>
                     </div>
-                    <Badge className={`${statusColor} border flex items-center gap-1`}>
-                      <StatusIcon className="h-3 w-3" />
-                      {statusLabel}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${statusColor} border flex items-center gap-1`}>
+                        <StatusIcon className="h-3 w-3" />
+                        {statusLabel}
+                      </Badge>
+                      {localTime && (
+                        <div className="text-xs px-2 py-0.5 rounded border bg-white text-gray-700">
+                          {localTime}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
 

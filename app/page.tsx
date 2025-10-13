@@ -69,7 +69,7 @@ export default function PhDTrackerPro() {
   const [showDocumentForm, setShowDocumentForm] = useState(false)
   const [showTimelineForm, setShowTimelineForm] = useState(false)
   const [editingTimelineEvent, setEditingTimelineEvent] = useState<TimelineEvent | undefined>()
-  console.log(profile)
+//   console.log(profile)
   // Data states
   const [universities, setUniversities] = useState<University[]>([])
   const [professors, setProfessors] = useState<Professor[]>([])
@@ -351,12 +351,13 @@ export default function PhDTrackerPro() {
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Application Tracker</h1>
+                <h1 className="text-lg font-bold text-gray-900">PhD Tracker Pro</h1>
                 <p className="text-xs text-gray-500">Organise Your Grad Applications</p>
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -366,7 +367,7 @@ export default function PhDTrackerPro() {
                   className="pl-10 w-80 bg-white border-gray-300 shadow-sm focus:shadow-md transition-shadow"
                 />
               </div>
-
+            {/*
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs bg-red-500">
@@ -377,6 +378,7 @@ export default function PhDTrackerPro() {
               <Button variant="ghost" size="icon">
                 <Filter className="h-5 w-5" />
               </Button>
+              */}
 
               {/* User Menu */}
               <DropdownMenu>
@@ -548,9 +550,12 @@ export default function PhDTrackerPro() {
         />
       )}
 
-      {showProfessorForm && (
-        <ProfessorForm onClose={() => setShowProfessorForm(false)} onSave={handleAddProfessor} />
-      )}
+      <ProfessorForm
+        open={showProfessorForm}
+        setOpen={setShowProfessorForm}
+        editingProfessor={undefined}
+        refresh={loadData}
+      />
 
       {showDocumentForm && (
         <DocumentForm

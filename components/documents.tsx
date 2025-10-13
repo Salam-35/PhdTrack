@@ -17,6 +17,8 @@ import {
   GraduationCap,
   Upload as UploadIcon
 } from "lucide-react"
+import CourseEvaluator from "@/components/course-evaluator"
+import CourseEvaluationDB from "@/components/course-evaluation-db"
 
 interface University {
   id: string
@@ -206,6 +208,12 @@ export default function DocumentsPage({
         <div className="space-y-6">
           <DocumentUploadForm onUpload={fetchData} />
         </div>
+
+        {/* Course-wise Evaluation */}
+        <CourseEvaluator />
+
+        {/* Saved Evaluations (Database) */}
+        <CourseEvaluationDB />
 
         {/* Uploaded Documents Section */}
         <Card className="shadow-lg">
