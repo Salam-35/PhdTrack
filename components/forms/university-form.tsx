@@ -150,8 +150,15 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white shadow-2xl border-0">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+      role="presentation"
+    >
+      <Card
+        className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white shadow-2xl border-0"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
           <CardTitle className="text-xl font-semibold text-gray-800">
             {university ? "Edit University" : "Add University"}
