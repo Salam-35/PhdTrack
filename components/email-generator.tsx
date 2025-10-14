@@ -114,12 +114,31 @@ const buildProfessorProfileText = (
       lines.push(`Summary: ${insights.summary}`)
     }
 
+    if (insights.researchTopics && insights.researchTopics.length > 0) {
+      lines.push(`Research focus areas: ${insights.researchTopics.join(', ')}`)
+    }
+
     if (insights.labName) {
       lines.push(`Lab: ${insights.labName}${insights.labWebsite ? ` (${insights.labWebsite})` : ''}`)
     }
 
     if (insights.personalWebsite) {
       lines.push(`Personal website: ${insights.personalWebsite}`)
+    }
+
+    const alignedPublications = insights.alignedPublications || []
+    const publications = insights.publications || []
+
+    if (alignedPublications.length > 0) {
+      const pubLines = alignedPublications
+        .map((pub) => `- ${pub.title}${pub.url ? ` (${pub.url})` : ''}${pub.snippet ? ` — ${pub.snippet}` : ''}`)
+        .join('\n')
+      lines.push(`Aligned publications with healthcare AI/computer vision focus:\n${pubLines}`)
+    } else if (publications.length > 0) {
+      const pubLines = publications.slice(0, 3)
+        .map((pub) => `- ${pub.title}${pub.url ? ` (${pub.url})` : ''}${pub.snippet ? ` — ${pub.snippet}` : ''}`)
+        .join('\n')
+      lines.push(`Representative publications:\n${pubLines}`)
     }
 
     if (insights.relatedLinks.length > 0) {
@@ -211,7 +230,7 @@ export default function EmailGenerator({ open, onClose, professor }: EmailGenera
       }
 
       // Step 2: Generate email based on professor info
-      const emailPrompt = `Generate a highly personalized PhD application email based on the detailed research profile.
+const emailPrompt = `Generate a highly personalized PhD application email based on the detailed research profile.
 
 ## EMAIL CONTEXT
 **Professor:** ${professor.name} (${professor.email})
@@ -240,7 +259,9 @@ ${cvContext}
 4. **Value Proposition:** What unique skills/perspective student brings
 5. **Call to Action:** Specific request (meeting, discussion, etc.)
 6. **Tone:** Professional but personable, showing genuine interest
-7. **Length:** 150-250 words, concise but comprehensive
+7. **Publications:** Reference at least one provided publication (prefer aligned ones) without inventing any titles
+8. **Length:** 150-250 words, concise but comprehensive
+9. **Integrity:** Use only the supplied professor information—do not fabricate projects, labs, or publications
 
 ${customInstructions ? `## SPECIAL INSTRUCTIONS
 ${customInstructions}

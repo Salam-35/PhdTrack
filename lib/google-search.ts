@@ -32,11 +32,14 @@ export interface ProfessorInsights {
   labWebsite?: string
   personalWebsite?: string
   relatedLinks: ProfessorLink[]
+  publications: ProfessorLink[]
+  alignedPublications: ProfessorLink[]
+  researchTopics: string[]
   usedQueries: string[]
   notes?: string
 }
 
-const MAX_SEARCHES = 8
+const MAX_SEARCHES = 2
 const MAX_LINKS = 5
 const LAB_REGEX = /(lab|laboratory|centre|center|group|institute|research\s+(?:center|centre|group|lab)|research team|vision lab|ai lab|machine learning|computer vision|robotics|nlp lab|data science)/i
 const GENERIC_EMAIL_DOMAINS = new Set([
@@ -50,6 +53,60 @@ const GENERIC_EMAIL_DOMAINS = new Set([
   'zoho.com',
   'pm.me',
 ])
+
+const PUBLICATION_KEYWORDS = [
+  'journal',
+  'conference',
+  'proceedings',
+  'transactions',
+  'ieee',
+  'acm',
+  'publication',
+  'paper',
+  'arxiv',
+  'springer',
+  'elsevier',
+  'nature',
+  'science',
+  'cvpr',
+  'iccv',
+  'neurips',
+  'nips',
+  'miccai',
+  'pattern recognition',
+  'medical imaging',
+  'computer vision',
+  'deep learning',
+  'machine learning',
+  'ai',
+  'healthcare',
+  'analysis',
+]
+
+const ALIGNMENT_KEYWORDS = [
+  'medical imaging',
+  'medical image',
+  'healthcare',
+  'health care',
+  'computer vision',
+  'vision',
+  'deep learning',
+  'machine learning',
+  'ai',
+  'artificial intelligence',
+  'pose estimation',
+  'gait',
+  'keypoint',
+  'segmentation',
+  'detection',
+  'classification',
+  'radiology',
+  'medical data',
+  'biomedical',
+  'clinical',
+  'explainable',
+  'interpretability',
+]
 
 const truncate = (text: string, maxLength: number) => {
   if (!text) return ''
@@ -205,9 +262,13 @@ const extractResearchInterests = (items: CustomSearchItem[], professorName: stri
 }
 
 const buildSummary = (items: CustomSearchItem[], professorName: string) => {
-  if (!items.length) return ''
+  if (!items.length) {
+    return {
+      summary: '',
+      researchTopics: [],
+    }
+  }
 
-  // Extract research interests first
   const researchInterests = extractResearchInterests(items, professorName)
 
   const snippets = items
@@ -215,7 +276,12 @@ const buildSummary = (items: CustomSearchItem[], professorName: string) => {
     .filter(Boolean)
     .filter(snippet => snippet.toLowerCase().includes(professorName.toLowerCase()))
 
-  if (!snippets.length && !researchInterests.length) return ''
+  if (!snippets.length && !researchInterests.length) {
+    return {
+      summary: '',
+      researchTopics: researchInterests,
+    }
+  }
 
   const uniqueSnippets = Array.from(new Set(snippets))
   let summary = uniqueSnippets.join(' ').substring(0, 400)
@@ -224,7 +290,60 @@ const buildSummary = (items: CustomSearchItem[], professorName: string) => {
     summary = `Research Focus: ${researchInterests.join('; ')}. ${summary}`
   }
 
-  return truncate(summary, 600)
+  return {
+    summary: truncate(summary, 600),
+    researchTopics: researchInterests,
+  }
+}
+
+const extractPublications = (items: CustomSearchItem[]) => {
+  const publications: ProfessorLink[] = []
+  const alignedPublications: ProfessorLink[] = []
+  const seenTitles = new Set<string>()
+  const seenUrls = new Set<string>()
+
+  for (const item of items) {
+    const title = item.title?.trim()
+    const snippet = item.snippet?.trim()
+    const url = normalizeUrl(item.link)
+    const combinedText = `${title || ''} ${snippet || ''}`.toLowerCase()
+
+    const containsPublicationCue = PUBLICATION_KEYWORDS.some(keyword => combinedText.includes(keyword))
+    const containsYear = /\b(19|20)\d{2}\b/.test(combinedText)
+
+    if (!containsPublicationCue && !containsYear) {
+      continue
+    }
+
+    const normalizedTitle = title ? title.toLowerCase() : undefined
+    if (normalizedTitle && seenTitles.has(normalizedTitle)) {
+      continue
+    }
+    if (url && seenUrls.has(url)) {
+      continue
+    }
+
+    const entry: ProfessorLink = {
+      title: title || (url ? url.replace(/^https?:\/\//, '') : 'Publication'),
+      url,
+      snippet: truncate(snippet || '', 260),
+    }
+
+    publications.push(entry)
+    if (normalizedTitle) seenTitles.add(normalizedTitle)
+    if (url) seenUrls.add(url)
+
+    if (ALIGNMENT_KEYWORDS.some(keyword => combinedText.includes(keyword))) {
+      alignedPublications.push(entry)
+    }
+
+    if (publications.length >= 8) break
+  }
+
+  return {
+    publications,
+    alignedPublications,
+  }
 }
 
 const performSearch = async (query: string, apiKey: string, cx: string) => {
@@ -267,6 +386,9 @@ export const fetchProfessorInsights = async (params: {
     return {
       summary: '',
       relatedLinks: [],
+      publications: [],
+      alignedPublications: [],
+      researchTopics: [],
       usedQueries: [],
       notes: apiKey
         ? 'Google Custom Search CX identifier missing.'
@@ -487,12 +609,16 @@ export const fetchProfessorInsights = async (params: {
     return {
       summary: '',
       relatedLinks: [],
+      publications: [],
+      alignedPublications: [],
+      researchTopics: [],
       usedQueries,
       notes: error instanceof Error ? error.message : 'Unknown Google search error.',
     }
   }
 
-  const summary = buildSummary(collectedItems, name)
+  const { summary, researchTopics } = buildSummary(collectedItems, name)
+  const { publications, alignedPublications } = extractPublications(collectedItems)
 
   const noteMessages: string[] = []
 
@@ -508,12 +634,19 @@ export const fetchProfessorInsights = async (params: {
     noteMessages.push('Personal website not located in search results.')
   }
 
+  if (!publications.length) {
+    noteMessages.push('Publications not surfaced by Google search; consider manual verification.')
+  }
+
   return {
     summary,
     labName,
     labWebsite,
     personalWebsite,
     relatedLinks,
+    publications,
+    alignedPublications,
+    researchTopics,
     usedQueries,
     notes: noteMessages.length ? noteMessages.join(' ') : undefined,
   }

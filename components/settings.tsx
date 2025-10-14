@@ -1,5 +1,5 @@
 "use client"
-import { useState, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,33 +11,32 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useUser } from "@/components/UserProvider"
 import { db } from "@/lib/supabase"
-import { 
-  SettingsIcon, 
-  User, 
-  Bell, 
-  Shield, 
-  Download, 
-  Upload, 
-  Trash2, 
-  Mail, 
-  Calendar, 
-  Moon, 
-  Sun,
+import { useSearchParams, useRouter } from "next/navigation"
+import {
+  SettingsIcon,
+  User,
+  Bell,
+  Download,
+  Upload,
+  Trash2,
+  Mail,
+  Calendar,
   Camera,
   Plus,
   X,
   Save,
-  Loader2
+  Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 
 export default function SettingsPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, profile, loading: userLoading, updateProfile, uploadAvatar, deleteAvatar,addResearchInterest, removeResearchInterest, refreshProfile } = useUser()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
   const [newInterest, setNewInterest] = useState("")
   const [formData, setFormData] = useState({
     display_name: profile?.display_name || "",
@@ -65,6 +64,98 @@ export default function SettingsPage() {
   })
 
   const [researchInterests, setResearchInterests] = useState(profile?.research_interests || [])
+  const [gmailStatusLoading, setGmailStatusLoading] = useState(true)
+  const [gmailActionLoading, setGmailActionLoading] = useState(false)
+  const [gmailDisconnecting, setGmailDisconnecting] = useState(false)
+  const [gmailStatus, setGmailStatus] = useState<{ connected: boolean; gmailAddress?: string | null; updatedAt?: string | null }>({ connected: false })
+
+  const fetchGmailStatus = async () => {
+    setGmailStatusLoading(true)
+    try {
+      const response = await fetch('/api/integrations/gmail/status', {
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to load Gmail status')
+      }
+      const data = await response.json()
+      setGmailStatus({
+        connected: Boolean(data.connected),
+        gmailAddress: data.gmailAddress || null,
+        updatedAt: data.updatedAt || null,
+      })
+    } catch (error) {
+      console.error(error)
+      setGmailStatus({ connected: false })
+    } finally {
+      setGmailStatusLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchGmailStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const result = searchParams?.get('gmail')
+    if (!result) return
+
+    if (result === 'connected') {
+      toast.success("Gmail account connected")
+      fetchGmailStatus()
+    } else if (result === 'error') {
+      const message = searchParams?.get('message')
+      toast.error(message ? `Gmail integration failed: ${decodeURIComponent(message)}` : 'Gmail integration failed')
+    }
+
+    router.replace('/settings')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const handleConnectGmail = async () => {
+    setGmailActionLoading(true)
+    try {
+      const response = await fetch('/api/integrations/gmail/auth-url', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to start Gmail authentication')
+      }
+      const data = await response.json()
+      if (data?.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('Invalid Gmail auth response')
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Unable to start Gmail integration. Please try again.')
+    } finally {
+      setGmailActionLoading(false)
+    }
+  }
+
+  const handleDisconnectGmail = async () => {
+    setGmailDisconnecting(true)
+    try {
+      const response = await fetch('/api/integrations/gmail/disconnect', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to disconnect Gmail integration')
+      }
+      toast.success('Gmail integration removed')
+      fetchGmailStatus()
+    } catch (error) {
+      console.error(error)
+      toast.error('Unable to disconnect Gmail integration. Please try again.')
+    } finally {
+      setGmailDisconnecting(false)
+    }
+  }
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -705,25 +796,106 @@ export default function SettingsPage() {
       </Card>
       */}
 
-      {/* Appearance
+      {/* Gmail Integration */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            {darkMode ? <Moon className="h-5 w-5 text-primary-500" /> : <Sun className="h-5 w-5 text-primary-500" />}
-            <span>Appearance</span>
+            <Mail className="h-5 w-5 text-red-500" />
+            <span>Gmail Integration</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="text-sm font-medium">Dark Mode</div>
-              <div className="text-xs text-gray-500">Switch between light and dark themes</div>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Connect a Gmail account to automatically track outreach, send follow-ups, and keep your professor correspondence organised. You can connect any Gmail account, even if it’s different from the one you use to sign in.
+          </p>
+
+          {gmailStatusLoading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking integration status…
             </div>
-            <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+          ) : gmailStatus.connected ? (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">Connected Gmail Account</p>
+                  <p className="text-green-700">{gmailStatus.gmailAddress}</p>
+                  {gmailStatus.updatedAt && (
+                    <p className="text-xs text-green-700/80 mt-1">
+                      Linked {new Date(gmailStatus.updatedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <Badge variant="outline" className="border-green-300 bg-white text-green-700">
+                  Connected
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+              <p className="font-medium">No Gmail account connected</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Connect to unlock automatic email tracking and follow-up reminders.
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            {gmailStatus.connected ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDisconnectGmail}
+                disabled={gmailDisconnecting}
+                className="border-red-200 text-red-600 hover:bg-red-50"
+              >
+                {gmailDisconnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Disconnecting…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Disconnect Gmail
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleConnectGmail}
+                disabled={gmailActionLoading}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                {gmailActionLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Redirecting…
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Connect Gmail
+                  </>
+                )}
+              </Button>
+            )}
+
+            {gmailStatus.connected && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleConnectGmail}
+                disabled={gmailActionLoading}
+                className="text-sm text-gray-600 hover:text-primary-600"
+              >
+                Reconnect different account
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
-      */}
 
       {/* Data Management */}
       <Card>

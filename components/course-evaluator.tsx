@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Upload, Wand2, Trash2, Plus } from "lucide-react"
+import { Loader2, Wand2, Trash2, Plus } from "lucide-react"
 import { db } from "@/lib/supabase"
 import { useUser } from "@/components/UserProvider"
+import { extractCoursesWithOpenAI } from "@/lib/course-extraction"
 
 type Course = {
   id: string
@@ -197,58 +198,33 @@ export default function CourseEvaluator() {
       setLoading(true)
       setMessage(null)
       const text = await readTranscriptAsText()
-      if (!text || text.length < 50) {
-        setMessage("Transcript text appears empty. Try pasting transcript text if PDF parsing fails.")
-        return
-      }
-
       const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY
       if (!apiKey) {
         setMessage("Missing NEXT_PUBLIC_OPENAI_API_KEY. Configure it to use AI extraction.")
         return
       }
-
-      const prompt = `You are given transcript text. Extract all courses as JSON array. Each item must include: code, name, grade, creditHours. If code is missing, infer or leave empty string. If credit hours absent, infer common values from context (e.g., 3) or 0. Use uppercase for grade.
-Return ONLY JSON like: [{"code":"CSE101","name":"Intro to CS","grade":"A","creditHours":3}, ...]
-
-Transcript:\n${text.slice(0, 18000)}`
-
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'Extract structured data and return valid JSON only.' },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0,
-          max_tokens: 2000
-        })
-      })
-
-      if (!resp.ok) {
-        setMessage(`OpenAI error ${resp.status}`)
+      if ((!file || file.size === 0) && (!text || text.trim().length < 20)) {
+        setMessage("Transcript text appears empty. Try pasting transcript text if PDF parsing fails.")
         return
       }
-
-      const data = await resp.json()
-      let content: string = data.choices?.[0]?.message?.content || ''
-      content = content.replace(/```json\n?|```/g, '').trim()
-      const parsed = JSON.parse(content) as Array<{ code?: string; name?: string; grade?: string; creditHours?: number }>
-      const next: Course[] = (parsed || []).map((p, idx) => ({
-        id: `c-${Date.now()}-${idx}`,
-        code: (p.code || '').toString().trim(),
-        name: (p.name || '').toString().trim(),
-        grade: (p.grade || '').toString().toUpperCase().trim(),
-        creditHours: Number(p.creditHours) || 0,
+      const result = await extractCoursesWithOpenAI({ apiKey, transcriptText: text, file })
+      const stamp = Date.now()
+      const next: Course[] = result.courses.map((course, idx) => ({
+        id: `c-${stamp}-${idx}`,
+        code: course.code,
+        name: course.name,
+        grade: course.grade.toUpperCase(),
+        creditHours: Number(course.creditHours) || 0,
         included: true,
       }))
       setCourses(next)
-      if (next.length === 0) setMessage('No courses found. Consider pasting plain text transcript.')
+      if (next.length === 0) {
+        setMessage("No courses found. Consider pasting plain text transcript.")
+      } else {
+        const from = result.meta.source === "file" ? "file analysis" : "text analysis"
+        const chunkNote = result.meta.chunks > 1 ? ` across ${result.meta.chunks} chunks` : ""
+        setMessage(`Extracted ${next.length} courses via ${from}${chunkNote}. Review for accuracy.`)
+      }
     } catch (e: any) {
       setMessage(`Extraction failed: ${e?.message || e}`)
     } finally {

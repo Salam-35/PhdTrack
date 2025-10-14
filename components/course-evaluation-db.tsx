@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Plus, Trash2, Save, Wand2 } from "lucide-react"
 import { db, type CourseEvaluation, type CourseEvaluationCourse } from "@/lib/supabase"
 import { useUser } from "@/components/UserProvider"
+import { extractCoursesWithOpenAI } from "@/lib/course-extraction"
 
 type GradeMap = Record<string, number>
 
@@ -202,41 +203,27 @@ export default function CourseEvaluationDB() {
       setMessage(null)
       const parsed = await parsePdf(file)
       const text = parsed || await file.text()
-      if (!text || text.length < 50) { setMessage('Transcript appears empty'); return }
       const key = process.env.NEXT_PUBLIC_OPENAI_API_KEY
       if (!key) { setMessage('Missing NEXT_PUBLIC_OPENAI_API_KEY'); return }
-      const prompt = `Extract all courses as JSON array: code, name, grade (uppercase), creditHours (number). Return ONLY JSON array. Transcript: \n${text.slice(0, 18000)}`
+      if (!selectedId) { setMessage('Select an evaluation first.'); return }
+      if ((!file || file.size === 0) && (!text || text.trim().length < 20)) { setMessage('Transcript appears empty'); return }
 
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'Return valid JSON array only.' },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0,
-          max_tokens: 2000
-        })
-      })
-      if (!resp.ok) { setMessage(`OpenAI error ${resp.status}`); return }
-      const data = await resp.json()
-      let content: string = data.choices?.[0]?.message?.content || ''
-      content = content.replace(/```json\n?|```/g, '').trim()
-      const rows = JSON.parse(content) as Array<{ code?: string; name?: string; grade?: string; creditHours?: number }>
+      const result = await extractCoursesWithOpenAI({ apiKey: key, transcriptText: text, file })
       if (!selectedId) return
-      for (const r of rows) {
+      if (!result.courses.length) { setMessage('No courses found by AI'); return }
+      for (const course of result.courses) {
         const created = await db.addEvaluationCourse(selectedId, {
-          code: (r.code || '').toString().trim(),
-          name: (r.name || '').toString().trim(),
-          grade: (r.grade || '').toString().toUpperCase().trim(),
-          credit_hours: Number(r.creditHours) || 0,
+          code: course.code,
+          name: course.name,
+          grade: course.grade.toUpperCase(),
+          credit_hours: Number(course.creditHours) || 0,
         })
         setCourses(prev => [...prev, created])
         setIncludeMap(prev => ({ ...prev, [created.id]: true }))
       }
-      if (!rows?.length) setMessage('No courses found by AI')
+      const from = result.meta.source === 'file' ? 'file analysis' : 'text analysis'
+      const chunkNote = result.meta.chunks > 1 ? ` across ${result.meta.chunks} chunks` : ''
+      setMessage(`Added ${result.courses.length} AI extracted courses via ${from}${chunkNote}.`)
     } catch (e: any) {
       setMessage(`Extraction failed: ${e?.message || e}`)
     } finally {
