@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +38,30 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [newInterest, setNewInterest] = useState("")
+  const defaultTimezone = "Asia/Dhaka"
+  const supportedTimezones = useMemo(() => {
+    const fallback = [
+      "Asia/Dhaka",
+      "UTC",
+      "America/New_York",
+      "America/Chicago",
+      "America/Los_Angeles",
+      "Europe/London",
+      "Europe/Berlin",
+      "Asia/Kolkata",
+      "Asia/Tokyo",
+      "Australia/Sydney",
+    ]
+    try {
+      if (typeof Intl !== "undefined" && typeof (Intl as any).supportedValuesOf === "function") {
+        return (Intl as any).supportedValuesOf("timeZone") as string[]
+      }
+    } catch {
+      // Ignore; fallback used below
+    }
+    return fallback
+  }, [])
+
   const [formData, setFormData] = useState({
     display_name: profile?.display_name || "",
     first_name: profile?.first_name || "",
@@ -52,6 +76,7 @@ export default function SettingsPage() {
     linkedin_url: profile?.linkedin_url || "",
     website_url: profile?.website_url || "",
     location: profile?.location || "",
+    timezone: profile?.timezone || defaultTimezone,
   })
   
   const [notifications, setNotifications] = useState({
@@ -64,6 +89,11 @@ export default function SettingsPage() {
   })
 
   const [researchInterests, setResearchInterests] = useState(profile?.research_interests || [])
+  const timezoneOptions = useMemo(() => {
+    if (!formData.timezone) return supportedTimezones
+    if (supportedTimezones.includes(formData.timezone)) return supportedTimezones
+    return [formData.timezone, ...supportedTimezones]
+  }, [supportedTimezones, formData.timezone])
   const [gmailStatusLoading, setGmailStatusLoading] = useState(true)
   const [gmailActionLoading, setGmailActionLoading] = useState(false)
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false)
@@ -161,6 +191,35 @@ export default function SettingsPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  useEffect(() => {
+    if (!profile) return
+    setFormData({
+      display_name: profile.display_name || "",
+      first_name: profile.first_name || "",
+      last_name: profile.last_name || "",
+      phone: profile.phone || "",
+      current_university: profile.current_university || "",
+      degree_seeking: profile.degree_seeking || "",
+      field_of_study: profile.field_of_study || "",
+      graduation_year: profile.graduation_year || "",
+      gpa: profile.gpa || "",
+      bio: profile.bio || "",
+      linkedin_url: profile.linkedin_url || "",
+      website_url: profile.website_url || "",
+      location: profile.location || "",
+      timezone: profile.timezone || defaultTimezone,
+    })
+    setNotifications({
+      deadlines: profile.notification_preferences?.deadlines ?? true,
+      professor_replies: profile.notification_preferences?.professor_replies ?? true,
+      document_reminders: profile.notification_preferences?.document_reminders ?? true,
+      weekly_digest: profile.notification_preferences?.weekly_digest ?? false,
+      email_notifications: profile.notification_preferences?.email_notifications ?? true,
+      push_notifications: profile.notification_preferences?.push_notifications ?? true,
+    })
+    setResearchInterests(profile.research_interests || [])
+  }, [profile, defaultTimezone])
+
   const handleSaveProfile = async () => {
     if (!profile) return
     
@@ -170,6 +229,7 @@ export default function SettingsPage() {
       await Promise.race([
         updateProfile({
           ...formData,
+          timezone: formData.timezone || defaultTimezone,
           degree_seeking: formData.degree_seeking === "PhD" || formData.degree_seeking === "Masters"
             ? formData.degree_seeking
             : undefined,
@@ -512,6 +572,25 @@ export default function SettingsPage() {
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 placeholder="City, Country"
               />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="timezone">Preferred Timezone</Label>
+              <Select
+                value={formData.timezone}
+                onValueChange={(value) => handleInputChange('timezone', value)}
+              >
+                <SelectTrigger id="timezone">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {timezoneOptions.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Used for showing your reference time alongside professor availability.</p>
             </div>
           </div>
           {/*

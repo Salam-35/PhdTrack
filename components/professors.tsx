@@ -26,6 +26,141 @@ import {
 import { toast } from "@/hooks/use-toast"
 import EmailGenerator from "@/components/email-generator"
 
+type ZonedParts = {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+}
+
+function getTimeZoneParts(date: Date, timeZone: string): ZonedParts | null {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })
+    const parts = formatter.formatToParts(date)
+    const map: Record<string, number> = {}
+    for (const part of parts) {
+      if (part.type === "literal") continue
+      map[part.type] = Number(part.value)
+    }
+    if (
+      Number.isFinite(map.year) &&
+      Number.isFinite(map.month) &&
+      Number.isFinite(map.day) &&
+      Number.isFinite(map.hour) &&
+      Number.isFinite(map.minute) &&
+      Number.isFinite(map.second)
+    ) {
+      return {
+        year: map.year,
+        month: map.month,
+        day: map.day,
+        hour: map.hour,
+        minute: map.minute,
+        second: map.second,
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function getTimeZoneOffset(date: Date, timeZone: string): number {
+  const parts = getTimeZoneParts(date, timeZone)
+  if (!parts) return 0
+  const utcMillis = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+    date.getUTCMilliseconds()
+  )
+  return utcMillis - date.getTime()
+}
+
+function makeDateInTimeZone(
+  timeZone: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second = 0
+): Date | null {
+  try {
+    const guess = Date.UTC(year, month - 1, day, hour, minute, second)
+    const initial = new Date(guess)
+    const offset = getTimeZoneOffset(initial, timeZone)
+    let adjusted = new Date(guess - offset)
+    const adjustedOffset = getTimeZoneOffset(adjusted, timeZone)
+    if (adjustedOffset !== offset) {
+      adjusted = new Date(guess - adjustedOffset)
+    }
+    return adjusted
+  } catch {
+    return null
+  }
+}
+
+function getNextNineAmDate(reference: Date, timeZone: string): Date | null {
+  const parts = getTimeZoneParts(reference, timeZone)
+  if (!parts) return null
+  let candidate = makeDateInTimeZone(timeZone, parts.year, parts.month, parts.day, 9, 0, 0)
+  if (!candidate) return null
+  if (candidate <= reference) {
+    const nextDayProbe = new Date(candidate.getTime() + 24 * 60 * 60 * 1000)
+    const nextParts = getTimeZoneParts(nextDayProbe, timeZone)
+    if (!nextParts) return null
+    candidate = makeDateInTimeZone(timeZone, nextParts.year, nextParts.month, nextParts.day, 9, 0, 0)
+  }
+  return candidate
+}
+
+function formatDateTimeForDisplay(date: Date, timeZone: string): string | null {
+  try {
+    const formatted = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(date)
+    return formatted
+      .replace(/\u202F/g, "")
+      .replace(/ ([AP]M)$/i, "$1")
+  } catch {
+    return null
+  }
+}
+
+function getReferenceTimeAtNextMorning(reference: Date, professorTimeZone?: string, referenceTimeZone?: string): string | null {
+  if (!professorTimeZone || !referenceTimeZone) return null
+  const targetInstant = getNextNineAmDate(reference, professorTimeZone)
+  if (!targetInstant) return null
+  return formatDateTimeForDisplay(targetInstant, referenceTimeZone)
+}
+
+function formatTimezoneLabel(tz: string): string {
+  if (!tz) return ""
+  const parts = tz.split("/")
+  const friendly = parts[parts.length - 1] || tz
+  return friendly.replace(/_/g, " ")
+}
+
 const statusConfig = {
   "not-contacted": {
     label: "Not Contacted",
@@ -70,7 +205,7 @@ interface ProfessorsPageProps {
 }
 
 export default function ProfessorsPage({ professors: propProfessors, setProfessors: setPropProfessors, searchQuery }: ProfessorsPageProps) {
-  const { user, loading: userLoading } = useUser()
+  const { user, loading: userLoading, profile } = useUser()
   const [filter, setFilter] = useState("all")
   const [openForm, setOpenForm] = useState(false)
   const [editingProfessor, setEditingProfessor] = useState(null)
@@ -80,6 +215,8 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
   const [localSearch, setLocalSearch] = useState("")
   const [now, setNow] = useState(new Date())
   const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
+  const referenceTimezone = profile?.timezone || "Asia/Dhaka"
+  const referenceTimezoneLabel = formatTimezoneLabel(referenceTimezone)
 
   const fetchProfessors = async () => {
     if (!user?.id) {
@@ -265,20 +402,9 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
     return () => { cancelled = true }
   }, [propProfessors, setPropProfessors, resolvingIds])
 
-  function formatLocalTime(tz?: string): string | null {
+  function formatLocalTime(date: Date, tz?: string): string | null {
     if (!tz) return null
-    try {
-      return now.toLocaleString(undefined, {
-        timeZone: tz,
-        hour: "2-digit",
-        minute: "2-digit",
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      })
-    } catch {
-      return null
-    }
+    return formatDateTimeForDisplay(date, tz)
   }
 
   async function resolveTimezoneWithOpenAI(university: string, professorName: string, key: string): Promise<string | null> {
@@ -503,7 +629,8 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
             const statusColor = statusConfig[professor.contact_status as keyof typeof statusConfig]?.color || "bg-gray-100 text-gray-800"
             const statusLabel = statusConfig[professor.contact_status as keyof typeof statusConfig]?.label || professor.contact_status
             const followUpStatus = getFollowUpStatus(professor)
-            const localTime = formatLocalTime(professor.timezone)
+            const localTime = formatLocalTime(now, professor.timezone)
+            const referenceNextMorning = getReferenceTimeAtNextMorning(now, professor.timezone, referenceTimezone)
 
             return (
               <Card key={professor.id} className={`relative ${followUpStatus.needsFollowUp ? 'border-red-300 bg-red-50/50' : ''}`}>
@@ -528,15 +655,20 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
                         <p className="text-sm text-gray-600">{professor.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={`${statusColor} border flex items-center gap-1`}>
+                    <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+                      <Badge className={`${statusColor} border flex items-center gap-1 text-xs px-2 py-0.5`}>
                         <StatusIcon className="h-3 w-3" />
                         {statusLabel}
                       </Badge>
                       {localTime && (
-                        <div className="text-xs px-2 py-0.5 rounded border bg-white text-gray-700">
-                          {localTime}
-                        </div>
+                        <span className="inline-flex items-center rounded border bg-white px-2 py-0.5 text-gray-700">
+                          Local: {localTime}
+                        </span>
+                      )}
+                      {referenceNextMorning && (
+                        <span className="inline-flex items-center rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-purple-700">
+                          {referenceTimezoneLabel}: {referenceNextMorning}
+                        </span>
                       )}
                     </div>
                   </div>

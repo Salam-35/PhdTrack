@@ -347,8 +347,12 @@ export default function PhDTrackerPro() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-white" />
+              <div className=" items-center justify-center">
+                  <img
+                    src="/logo.png"
+                    alt="Logo"
+                    className="h-10 w-25 object-contain"
+                  />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">PhD Tracker Pro</h1>

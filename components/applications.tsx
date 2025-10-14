@@ -192,8 +192,8 @@ export default function Applications({ universities, setUniversities }: Applicat
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Applications</h2>
-          <p className="text-gray-600">Track your PhD program applications</p>
+          <h2 className="text-l font-bold">Applications</h2>
+          <p className="text-gray-800 ">Track your PhD program applications</p>
         </div>
         <Button onClick={() => setShowForm(true)} className="bg-primary-500 hover:bg-primary-600">
           <Plus className="h-4 w-4 mr-2" />
