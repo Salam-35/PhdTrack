@@ -171,7 +171,8 @@ export default function SettingsPage() {
         db.getProfessors(user.id),
       ])
 
-      const XLSXModule = await import("xlsx")
+      // Use browser-ready build to avoid Node polyfills issues
+      const XLSXModule = await import("xlsx/dist/xlsx.full.min.js")
       const XLSX = XLSXModule.default || XLSXModule
       const workbook = XLSX.utils.book_new()
 

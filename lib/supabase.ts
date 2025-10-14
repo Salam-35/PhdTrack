@@ -112,6 +112,7 @@ export interface Professor {
   availability: "available" | "limited" | "not-available"
   funding_status: "funded" | "seeking" | "unknown"
   response_time?: string
+  timezone?: string
   user_id: string // Add user_id to link to profiles
   created_at: string
   updated_at: string
@@ -154,6 +155,27 @@ export interface TimelineEvent {
   updated_at: string
 }
 
+// Course Evaluation Types
+export interface CourseEvaluation {
+  id: string
+  user_id: string
+  name: string
+  level: string // e.g., Bachelor, Masters, PhD, Other
+  created_at: string
+  updated_at: string
+}
+
+export interface CourseEvaluationCourse {
+  id: string
+  evaluation_id: string
+  code: string
+  name: string
+  grade: string
+  credit_hours: number
+  created_at: string
+  updated_at: string
+}
+
 // Database operations
 export const db = {
   // User Profile Operations
@@ -174,7 +196,7 @@ export const db = {
         }
         throw error
       }
-      console.log("✅ Profile fetched successfully:", data)
+//       console.log("✅ Profile fetched successfully:", data)
       return data as UserProfile
     } catch (error) {
       console.error("❌ Error fetching user profile:", error)
@@ -585,6 +607,102 @@ export const db = {
     if (!fileName) return
 
     const { error } = await supabase.storage.from(bucket).remove([fileName])
+    if (error) throw error
+  },
+
+  // Course Evaluations (DB-backed)
+  async getCourseEvaluations(userId?: string): Promise<CourseEvaluation[]> {
+    try {
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser()
+        userId = user?.id
+      }
+      if (!userId) return []
+      const { data, error } = await supabase
+        .from('course_evaluations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as CourseEvaluation[]
+    } catch (e) {
+      console.error('Error fetching course evaluations:', e)
+      return []
+    }
+  },
+
+  async createCourseEvaluation(payload: { name: string; level: string; user_id?: string }): Promise<CourseEvaluation> {
+    let userId = payload.user_id
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id || ''
+    }
+    const { data, error } = await supabase
+      .from('course_evaluations')
+      .insert([{ name: payload.name, level: payload.level, user_id: userId }])
+      .select()
+      .single()
+    if (error) throw error
+    return data as CourseEvaluation
+  },
+
+  async updateCourseEvaluation(id: string, updates: Partial<Pick<CourseEvaluation, 'name' | 'level'>>): Promise<CourseEvaluation> {
+    const { data, error } = await supabase
+      .from('course_evaluations')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data as CourseEvaluation
+  },
+
+  async deleteCourseEvaluation(id: string): Promise<void> {
+    // Attempt to delete child rows first for safety
+    const { error: childErr } = await supabase.from('course_evaluation_courses').delete().eq('evaluation_id', id)
+    if (childErr) console.warn('Warning deleting child courses:', childErr)
+    const { error } = await supabase.from('course_evaluations').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  async getEvaluationCourses(evaluationId: string): Promise<CourseEvaluationCourse[]> {
+    try {
+      const { data, error } = await supabase
+        .from('course_evaluation_courses')
+        .select('*')
+        .eq('evaluation_id', evaluationId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data || []) as CourseEvaluationCourse[]
+    } catch (e) {
+      console.error('Error fetching courses for evaluation:', e)
+      return []
+    }
+  },
+
+  async addEvaluationCourse(evaluationId: string, course: { code: string; name: string; grade: string; credit_hours: number }): Promise<CourseEvaluationCourse> {
+    const { data, error } = await supabase
+      .from('course_evaluation_courses')
+      .insert([{ evaluation_id: evaluationId, ...course }])
+      .select()
+      .single()
+    if (error) throw error
+    return data as CourseEvaluationCourse
+  },
+
+  async updateEvaluationCourse(id: string, updates: Partial<Pick<CourseEvaluationCourse, 'code' | 'name' | 'grade' | 'credit_hours'>>): Promise<CourseEvaluationCourse> {
+    const { data, error } = await supabase
+      .from('course_evaluation_courses')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data as CourseEvaluationCourse
+  },
+
+  async deleteEvaluationCourse(id: string): Promise<void> {
+    const { error } = await supabase.from('course_evaluation_courses').delete().eq('id', id)
     if (error) throw error
   },
 }

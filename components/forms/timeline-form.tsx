@@ -49,7 +49,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
     priority: (event?.priority as "high" | "medium" | "low") || "medium",
     university_id: event?.university_id || "none",
     professor_id: event?.professor_id || "none",
-    category: (event?.category as "application" | "professor" | "document" | "test" | "interview" | "decision") || "application",
+    category: (event?.category as "application" | "professor" | "document" | "interview") || "application",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,10 +117,6 @@ export default function TimelineForm({ onClose, onSave, universities, professors
           </Button>
         </CardHeader>
         <CardContent>
-          {/* Debug Info - remove in production */}
-          <div className="bg-gray-100 p-2 rounded text-xs text-gray-600 mb-4">
-            Debug: User ID: {user.id}, {universities.length} universities, {professors.length} professors available
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -200,9 +196,7 @@ export default function TimelineForm({ onClose, onSave, universities, professors
                     <SelectItem value="application">Application</SelectItem>
                     <SelectItem value="professor">Professor</SelectItem>
                     <SelectItem value="document">Document</SelectItem>
-                    <SelectItem value="test">Test</SelectItem>
                     <SelectItem value="interview">Interview</SelectItem>
-                    <SelectItem value="decision">Decision</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
