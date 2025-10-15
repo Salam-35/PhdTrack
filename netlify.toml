@@ -4,5 +4,7 @@
 [build.environment]
   # Allow Netlify to install with a non-frozen lockfile so CI can update pnpm-lock.yaml
   NPM_FLAGS = "--no-frozen-lockfile"
-  NODE_VERSION = "22"
+  NODE_VERSION = "18"
 
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
