@@ -50,8 +50,7 @@ const defaultGradeMap: GradeMap = {
   "B-": 2.75,
   "C+": 2.5,
   "C": 2.25,
-  "C-": 2.0,
-  "D": 1.0,
+  "D": 2.0,
   "F": 0.0,
 }
 
