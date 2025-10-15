@@ -1,5 +1,6 @@
 
 import { createClient } from "@supabase/supabase-js"
+import { sanitizeDeadlines, getDeadlineInfo } from "./university-deadlines"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
@@ -58,6 +59,11 @@ export interface UserProfile {
 }
 
 // Database Types (existing interfaces remain the same)
+export type UniversityDeadline = {
+  term: string
+  deadline: string
+}
+
 export interface University {
   id: string
   name: string
@@ -66,7 +72,8 @@ export interface University {
   location: string
   ranking: number
   application_fee: number
-  deadline: string
+  deadline?: string | null
+  deadlines?: UniversityDeadline[]
   status:
     | "not-started"
     | "in-progress"
@@ -174,6 +181,33 @@ export interface CourseEvaluationCourse {
   credit_hours: number
   created_at: string
   updated_at: string
+}
+
+function removeUndefined<T extends Record<string, any>>(record: T): T {
+  const entries = Object.entries(record).filter(([, value]) => value !== undefined)
+  return Object.fromEntries(entries) as T
+}
+
+function normalizeUniversityRow(row: any): University {
+  const deadlines = sanitizeDeadlines(row?.deadlines, row?.deadline ?? undefined)
+  const info = getDeadlineInfo(deadlines)
+  const primaryDeadline = info.current?.deadline ?? row?.deadline ?? null
+  return {
+    ...row,
+    deadlines,
+    deadline: primaryDeadline,
+  }
+}
+
+function prepareUniversityPayload(university: Partial<University>) {
+  const deadlines = sanitizeDeadlines(university.deadlines, university.deadline ?? undefined)
+  const info = getDeadlineInfo(deadlines)
+  const payload = {
+    ...university,
+    deadlines,
+    deadline: info.current?.deadline ?? university.deadline ?? undefined,
+  }
+  return removeUndefined(payload)
 }
 
 // Database operations
@@ -374,7 +408,7 @@ export const db = {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
       if (error) throw error
-      return data as University[]
+      return (data as University[]).map(normalizeUniversityRow)
     } catch (error) {
       console.error("Error fetching universities:", error)
       return []
@@ -382,28 +416,30 @@ export const db = {
   },
 
   async addUniversity(university: Omit<University, "id" | "created_at" | "updated_at">) {
+    const payload = prepareUniversityPayload(university)
     const { data, error } = await supabase
       .from("universities")
       .insert([{
-        ...university,
+        ...payload,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }])
       .select()
       .single()
     if (error) throw error
-    return data as University
+    return normalizeUniversityRow(data)
   },
 
   async updateUniversity(id: string, updates: Partial<University>) {
+    const payload = prepareUniversityPayload(updates)
     const { data, error } = await supabase
       .from("universities")
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...payload, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single()
     if (error) throw error
-    return data as University
+    return normalizeUniversityRow(data)
   },
 
   async deleteUniversity(id: string) {

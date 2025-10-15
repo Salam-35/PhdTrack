@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { X, Plus, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { db, type University } from "@/lib/supabase"
+import { sanitizeDeadlines } from "@/lib/university-deadlines"
 import { toast } from "@/hooks/use-toast"
 
 interface UniversityFormProps {
@@ -21,8 +22,17 @@ interface UniversityFormProps {
   university?: University
 }
 
+type SemesterEntry = {
+  term: string
+  deadline: string
+}
+
 export default function UniversityForm({ onClose, onSave, university }: UniversityFormProps) {
   const [loading, setLoading] = useState(false)
+  const formatDateForInput = (value: string) => {
+    if (!value) return ""
+    return value.length >= 10 ? value.slice(0, 10) : value
+  }
   const [formData, setFormData] = useState({
     name: university?.name || "",
     program: university?.program || "",
@@ -30,7 +40,6 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
     location: university?.location || "",
     ranking: university?.ranking?.toString() || "",
     application_fee: university?.application_fee?.toString() || "",
-    deadline: university?.deadline || "",
     status: university?.status || ("not-started" as const),
     priority: university?.priority || ("medium" as const),
     requirements: university?.requirements || [],
@@ -43,10 +52,51 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
     acceptance_funding_status: university?.acceptance_funding_status || ("unknown" as const),
     notes: university?.notes || "",
   })
+  const initialSanitizedDeadlines = sanitizeDeadlines(university?.deadlines, university?.deadline ?? undefined)
+  const [semesterDeadlines, setSemesterDeadlines] = useState<SemesterEntry[]>(
+    initialSanitizedDeadlines.length
+      ? initialSanitizedDeadlines.map((entry) => ({
+          term: entry.term,
+          deadline: formatDateForInput(entry.deadline),
+        }))
+      : [{ term: "", deadline: "" }]
+  )
 
   const [newRequirement, setNewRequirement] = useState("")
   const [newFundingType, setNewFundingType] = useState("")
   const [showRequirements, setShowRequirements] = useState(false)
+
+  useEffect(() => {
+    setFormData({
+      name: university?.name || "",
+      program: university?.program || "",
+      degree: university?.degree || ("PhD" as const),
+      location: university?.location || "",
+      ranking: university?.ranking?.toString() || "",
+      application_fee: university?.application_fee?.toString() || "",
+      status: university?.status || ("not-started" as const),
+      priority: university?.priority || ("medium" as const),
+      requirements: university?.requirements || [],
+      gre_required: university?.gre_required || false,
+      gre_score: university?.gre_score || "",
+      sop_length: university?.sop_length?.toString() || "",
+      funding_available: university?.funding_available || false,
+      funding_types: university?.funding_types || [],
+      funding_amount: university?.funding_amount || "",
+      acceptance_funding_status: university?.acceptance_funding_status || ("unknown" as const),
+      notes: university?.notes || "",
+    })
+
+    const sanitized = sanitizeDeadlines(university?.deadlines, university?.deadline ?? undefined)
+    setSemesterDeadlines(
+      sanitized.length
+        ? sanitized.map((entry, index) => ({
+            term: entry.term || `${"Deadline"} ${index + 1}`,
+            deadline: formatDateForInput(entry.deadline),
+          }))
+        : [{ term: "", deadline: "" }]
+    )
+  }, [university])
 
   const requirementOptions = [
     "Transcripts",
@@ -102,17 +152,55 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
     }))
   }
 
+  const updateSemesterEntry = (index: number, patch: Partial<SemesterEntry>) => {
+    setSemesterDeadlines((prev) =>
+      prev.map((entry, idx) => (idx === index ? { ...entry, ...patch } : entry))
+    )
+  }
+
+  const addSemester = () => {
+    setSemesterDeadlines((prev) => [...prev, { term: "", deadline: "" }])
+  }
+
+  const removeSemester = (index: number) => {
+    setSemesterDeadlines((prev) => {
+      if (prev.length === 1) {
+        return [{ term: "", deadline: "" }]
+      }
+      return prev.filter((_, idx) => idx !== index)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
+      const sanitizedDeadlines = sanitizeDeadlines(
+        semesterDeadlines.map((entry, index) => ({
+          term: entry.term.trim() || `Deadline ${index + 1}`,
+          deadline: entry.deadline,
+        }))
+      )
+
+      if (sanitizedDeadlines.length === 0) {
+        toast({
+          title: "Missing deadline",
+          description: "Please add at least one semester deadline.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
       // Prepare university data
       const baseData = {
         ...formData,
         ranking: Number.parseInt(formData.ranking) || 0,
         application_fee: Number.parseFloat(formData.application_fee) || 0,
         sop_length: Number.parseInt(formData.sop_length) || 0,
+        deadlines: sanitizedDeadlines,
+        deadline: sanitizedDeadlines[0]?.deadline,
       }
 
       // Only include acceptance_funding_status if it's accepted (to avoid DB error if column doesn't exist yet)
@@ -170,7 +258,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
         <CardContent className="p-3">
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="bg-blue-50/40 rounded-lg p-2 border border-blue-200/50">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
                   <Label htmlFor="name" className="text-xs font-medium text-blue-900">University Name *</Label>
                   <Input
@@ -208,8 +296,164 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
               </div>
             </div>
 
-            <div className="bg-green-50/40 rounded-lg p-2 border border-green-200/50">
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+            <div className="bg-green-50/40 rounded-lg p-3 border border-green-200/50">
+              <div className="space-y-2.5">
+
+                {/* Row 1: GRE, SOP, Fee, Status, Priority */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+
+                  <div className="flex items-center gap-1.5">
+                    <Checkbox
+                      id="gre_required"
+                      checked={formData.gre_required}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
+                      className="w-3.5 h-3.5"
+                    />
+                    <Label htmlFor="gre_required" className="text-xs font-medium text-purple-900">GRE</Label>
+                    {formData.gre_required && (
+                      <Input
+                        id="gre_score"
+                        value={formData.gre_score}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, gre_score: e.target.value }))}
+                        placeholder="320+"
+                        className="h-7 w-16 text-xs border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="sop_length" className="text-xs font-medium text-purple-900">SOP:</Label>
+                    <Input
+                      id="sop_length"
+                      type="number"
+                      value={formData.sop_length}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
+                      placeholder="2"
+                      className="h-7 w-14 text-xs border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                    />
+                    <span className="text-xs text-gray-600">pages</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="application_fee" className="text-xs font-medium text-green-900">Fee:</Label>
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-600 mr-0.5">$</span>
+                      <Input
+                        id="application_fee"
+                        type="number"
+                        step="0.01"
+                        value={formData.application_fee}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, application_fee: e.target.value }))}
+                        placeholder="125"
+                        className="h-7 w-16 text-xs border-green-200 focus:border-green-500 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="status" className="text-xs font-medium text-green-900">Status:</Label>
+                    <Select value={formData.status} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}>
+                      <SelectTrigger className="h-7 text-xs border-green-200 focus:border-green-500 w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="not-started">Not Started</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="under-review">Under Review</SelectItem>
+                        <SelectItem value="interview">Interview</SelectItem>
+                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="waitlisted">Waitlisted</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="priority" className="text-xs font-medium text-green-900">Priority:</Label>
+                    <Select value={formData.priority} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, priority: value }))}>
+                      <SelectTrigger className="h-7 text-xs border-green-200 focus:border-green-500 w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Row 2: Funding */}
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-2 pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <Checkbox
+                      id="funding_available"
+                      checked={formData.funding_available}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
+                      className="w-3.5 h-3.5"
+                    />
+                    <Label htmlFor="funding_available" className="text-xs font-medium text-purple-900">Funding</Label>
+                  </div>
+
+                  {formData.funding_available && (
+                    <>
+                      <Input
+                        id="funding_amount"
+                        value={formData.funding_amount}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
+                        placeholder="$55k/year"
+                        className="h-7 w-24 text-xs border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                      />
+
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {formData.funding_types.map((type) => (
+                            <span
+                              key={type}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                            >
+                              {type}
+                              <button
+                                onClick={() => setFormData((prev) => ({
+                                  ...prev,
+                                  funding_types: prev.funding_types.filter(t => t !== type)
+                                }))}
+                                className="hover:text-purple-900 focus:outline-none"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+
+                        <Select value={newFundingType} onValueChange={setNewFundingType}>
+                          <SelectTrigger className="h-7 w-28 text-xs border-purple-200 focus:border-purple-500">
+                            <SelectValue placeholder="Add type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {fundingTypeOptions.filter((opt) => !formData.funding_types.includes(opt)).map((option) => (
+                              <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 w-7 p-0 bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={() => addFundingType(newFundingType)}
+                          disabled={!newFundingType}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/*
+
                 <div>
                   <Label htmlFor="location" className="text-xs font-medium text-green-900">Location</Label>
                   <Input
@@ -231,61 +475,63 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                     placeholder="1"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="application_fee" className="text-xs font-medium text-green-900">Fee ($)</Label>
-                  <Input
-                    id="application_fee"
-                    type="number"
-                    step="0.01"
-                    value={formData.application_fee}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, application_fee: e.target.value }))}
-                    className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500 focus:ring-green-500"
-                    placeholder="125"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="deadline" className="text-xs font-medium text-green-900">Deadline *</Label>
-                  <Input
-                    id="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, deadline: e.target.value }))}
-                    required
-                    className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500 focus:ring-green-500"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="status" className="text-xs font-medium text-green-900">Status</Label>
-                  <Select value={formData.status} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}>
-                    <SelectTrigger className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="not-started">Not Started</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="submitted">Submitted</SelectItem>
-                      <SelectItem value="under-review">Under Review</SelectItem>
-                      <SelectItem value="interview">Interview</SelectItem>
-                      <SelectItem value="accepted">Accepted</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="waitlisted">Waitlisted</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="priority" className="text-xs font-medium text-green-900">Priority</Label>
-                  <Select value={formData.priority} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, priority: value }))}>
-                    <SelectTrigger className="h-8 mt-0.5 text-sm border-green-200 focus:border-green-500">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                */}
+
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-purple-900">Semesters & Deadlines</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={addSemester}
+                  className="h-8 px-2 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Semester
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {semesterDeadlines.map((entry, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-2">
+                    <div className="md:col-span-3">
+                      <Label className="text-xs font-medium text-purple-900">Semester / Term</Label>
+                      <Input
+                        value={entry.term}
+                        onChange={(e) => updateSemesterEntry(index, { term: e.target.value })}
+                        placeholder="e.g., Fall 2025"
+                        className="h-8 mt-0.5 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label className="text-xs font-medium text-purple-900">Deadline</Label>
+                      <Input
+                        type="date"
+                        value={entry.deadline}
+                        onChange={(e) => updateSemesterEntry(index, { deadline: e.target.value })}
+                        className="h-8 mt-0.5 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div className="md:col-span-1 flex items-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSemester(index)}
+                        className="h-8 w-8 text-red-600 hover:bg-red-50"
+                        disabled={semesterDeadlines.length === 1}
+                        aria-label="Remove semester deadline"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">Add multiple semesters to track rolling deadlines. The nearest upcoming deadline is highlighted across the app.</p>
             </div>
 
             <div className="bg-purple-50/30 rounded-lg p-3 border border-purple-200/40">

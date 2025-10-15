@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Edit, Trash2, DollarSign, Calendar, FileText, Users, Search, Plus, GraduationCap } from "lucide-react"
 import { db, type University } from "@/lib/supabase"
+import { sanitizeDeadlines, getDeadlineInfo, daysUntilDeadline } from "@/lib/university-deadlines"
 import { toast } from "@/hooks/use-toast"
 import UniversityForm from "./forms/university-form"
 import { useUser } from "@/components/UserProvider"
@@ -152,9 +153,21 @@ export default function Applications({ universities, setUniversities }: Applicat
     }
   }
 
-  const getDaysUntilDeadline = (deadline: string) => {
-    const days = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    return days
+  const formatDeadlineDate = (value: string) => {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString()
+  }
+
+  const getDeadlineDetails = (uni: University) => {
+    const normalized = sanitizeDeadlines(uni.deadlines, uni.deadline ?? undefined)
+    const info = getDeadlineInfo(normalized)
+    const daysRemaining = !info.isPast ? daysUntilDeadline(info.current) : null
+    return {
+      deadlines: normalized,
+      daysRemaining,
+      info,
+      isPast: info.isPast,
+    }
   }
 
   const filteredUniversities = universities.filter((uni) => {
@@ -281,141 +294,186 @@ export default function Applications({ universities, setUniversities }: Applicat
 
       {/* Applications Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredUniversities.map((university) => (
-          <Card key={university.id} className="relative">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{university.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{university.program}</p>
-                  <p className="text-xs text-gray-500">{university.location}</p>
+        {filteredUniversities.map((university) => {
+          const deadlineDetails = getDeadlineDetails(university)
+          const upcomingDeadline = deadlineDetails.info.current
+          const nextDeadline = deadlineDetails.info.next
+          const daysUntil = deadlineDetails.daysRemaining
+          const isPast = deadlineDetails.isPast
+          const countdownText = daysUntil !== null
+            ? `${daysUntil} day${Math.abs(daysUntil) === 1 ? "" : "s"} until ${upcomingDeadline?.term ?? "deadline"}`
+            : deadlineDetails.deadlines.length > 0
+              ? "All recorded deadlines have passed"
+              : "No deadlines recorded"
+          const upcomingLabel = isPast ? "Latest" : "Next"
+
+          return (
+            <Card key={university.id} className="relative">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{university.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{university.program}</p>
+                    <p className="text-xs text-gray-500">{university.location}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(university)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => deleteUniversity(university.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(university)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => deleteUniversity(university.id)}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Badge className={`${getStatusColor(university.status, university.acceptance_funding_status)} text-white`}>
+                    {getStatusLabel(university.status, university.acceptance_funding_status)}
+                  </Badge>
+                  <Badge className={getPriorityColor(university.priority)}>{university.priority} priority</Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progress</span>
+                    <span>{getProgress(university.status)}%</span>
+                  </div>
+                  <Progress value={getProgress(university.status)} className="h-2" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span>${university.application_fee}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      {upcomingDeadline
+                        ? `${upcomingLabel}: ${upcomingDeadline.term} • ${formatDeadlineDate(upcomingDeadline.deadline)}`
+                        : deadlineDetails.deadlines.length > 0
+                          ? "No upcoming deadline"
+                          : "No deadlines recorded"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span>{university.sop_length} pages</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span>{university.gre_required ? "GRE Required" : "No GRE"}</span>
+                  </div>
+                </div>
+
+                {university.gre_score && (
+                  <div className="text-sm">
+                    <span className="font-medium">GRE: </span>
+                    <span className="text-muted-foreground">{university.gre_score}</span>
+                  </div>
+                )}
+
+                {university.status === "accepted" && university.acceptance_funding_status && (
+                  <div className="text-sm">
+                    <span className="font-medium">Acceptance Funding: </span>
+                    <span className={university.acceptance_funding_status === "with-funding" ? "text-green-600 font-semibold" : "text-orange-600"}>
+                      {university.acceptance_funding_status === "with-funding" ? "Funded" :
+                       university.acceptance_funding_status === "without-funding" ? "Not Funded" :
+                       university.acceptance_funding_status === "pending" ? "Pending" : "Unknown"}
+                    </span>
+                  </div>
+                )}
+
+                {university.status !== "accepted" && university.funding_available && (
+                  <div className="text-sm">
+                    <span className="font-medium">Funding: </span>
+                    <span className="text-green-600">{university.funding_amount || "Available"}</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Requirements:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {university.requirements.slice(0, 3).map((req, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {req}
+                      </Badge>
+                    ))}
+                    {university.requirements.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{university.requirements.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {university.notes && (
+                  <div className="text-sm">
+                    <span className="font-medium">Notes: </span>
+                    <span className="text-muted-foreground">{university.notes.substring(0, 100)}...</span>
+                  </div>
+                )}
+
+                {deadlineDetails.deadlines.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Semester Deadlines</div>
+                    <div className="flex flex-wrap gap-2">
+                      {deadlineDetails.deadlines.map((deadline, index) => {
+                        const isCurrent = upcomingDeadline?.deadline === deadline.deadline
+                        return (
+                          <Badge
+                            key={`${deadline.term}-${deadline.deadline}-${index}`}
+                            variant={isCurrent ? "default" : "outline"}
+                            className={`text-xs ${isCurrent ? "bg-blue-600 text-white" : "border-blue-200 text-blue-700"}`}
+                          >
+                            {deadline.term}: {formatDeadlineDate(deadline.deadline)}
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                    {nextDeadline && (
+                      <div className="text-xs text-muted-foreground">
+                        Following: {nextDeadline.term} • {formatDeadlineDate(nextDeadline.deadline)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div
+                    className={`text-xs ${daysUntil !== null && daysUntil < 30 ? "text-red-600 font-medium" : "text-muted-foreground"}`}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                    {countdownText}
+                  </div>
+                  <Select
+                    value={university.status}
+                    onValueChange={(value: University["status"]) => updateStatus(university.id, value)}
+                  >
+                    <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not-started">Not Started</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="submitted">Submitted</SelectItem>
+                      <SelectItem value="under-review">Under Review</SelectItem>
+                      <SelectItem value="interview">Interview</SelectItem>
+                      <SelectItem value="accepted">Accepted</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="waitlisted">Waitlisted</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Badge className={`${getStatusColor(university.status, university.acceptance_funding_status)} text-white`}>
-                  {getStatusLabel(university.status, university.acceptance_funding_status)}
-                </Badge>
-                <Badge className={getPriorityColor(university.priority)}>{university.priority} priority</Badge>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Progress</span>
-                  <span>{getProgress(university.status)}%</span>
-                </div>
-                <Progress value={getProgress(university.status)} className="h-2" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span>${university.application_fee}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{new Date(university.deadline).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span>{university.sop_length} pages</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{university.gre_required ? "GRE Required" : "No GRE"}</span>
-                </div>
-              </div>
-
-              {university.gre_score && (
-                <div className="text-sm">
-                  <span className="font-medium">GRE: </span>
-                  <span className="text-muted-foreground">{university.gre_score}</span>
-                </div>
-              )}
-
-              {university.status === "accepted" && university.acceptance_funding_status && (
-                <div className="text-sm">
-                  <span className="font-medium">Acceptance Funding: </span>
-                  <span className={university.acceptance_funding_status === "with-funding" ? "text-green-600 font-semibold" : "text-orange-600"}>
-                    {university.acceptance_funding_status === "with-funding" ? "Funded" :
-                     university.acceptance_funding_status === "without-funding" ? "Not Funded" :
-                     university.acceptance_funding_status === "pending" ? "Pending" : "Unknown"}
-                  </span>
-                </div>
-              )}
-
-              {university.status !== "accepted" && university.funding_available && (
-                <div className="text-sm">
-                  <span className="font-medium">Funding: </span>
-                  <span className="text-green-600">{university.funding_amount || "Available"}</span>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Requirements:</div>
-                <div className="flex flex-wrap gap-1">
-                  {university.requirements.slice(0, 3).map((req, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {req}
-                    </Badge>
-                  ))}
-                  {university.requirements.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{university.requirements.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {university.notes && (
-                <div className="text-sm">
-                  <span className="font-medium">Notes: </span>
-                  <span className="text-muted-foreground">{university.notes.substring(0, 100)}...</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <div
-                  className={`text-xs ${getDaysUntilDeadline(university.deadline) < 30 ? "text-red-600 font-medium" : "text-muted-foreground"}`}
-                >
-                  {getDaysUntilDeadline(university.deadline)} days until deadline
-                </div>
-                <Select
-                  value={university.status}
-                  onValueChange={(value: University["status"]) => updateStatus(university.id, value)}
-                >
-                  <SelectTrigger className="w-32 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not-started">Not Started</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="under-review">Under Review</SelectItem>
-                    <SelectItem value="interview">Interview</SelectItem>
-                    <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                    <SelectItem value="waitlisted">Waitlisted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {filteredUniversities.length === 0 && (
