@@ -1,0 +1,8 @@
+[build]
+  command = "pnpm build"
+
+[build.environment]
+  # Allow Netlify to install with a non-frozen lockfile so CI can update pnpm-lock.yaml
+  NPM_FLAGS = "--no-frozen-lockfile"
+  NODE_VERSION = "18"
+

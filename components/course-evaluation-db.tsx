@@ -61,9 +61,8 @@ export default function CourseEvaluationDB() {
       try {
         const list = await db.getCourseEvaluations(user.id)
         setEvaluations(list)
-        if (list.length && !selectedId) {
-          setSelectedId(list[0].id)
-        }
+        // Do not auto-select; require user to pick from dropdown
+        if (!selectedId) setSelectedId(null)
       } finally {
         setLoading(false)
       }
@@ -247,35 +246,46 @@ export default function CourseEvaluationDB() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-3">
             <Label>Evaluations</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {evaluations.map(ev => (
-                <div
-                  key={ev.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedId(ev.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedId(ev.id) }}
-                  className={`px-3 py-2 rounded border cursor-pointer select-none ${selectedId === ev.id ? 'bg-blue-50 border-blue-300' : 'bg-white hover:bg-gray-50'}`}
-                  aria-pressed={selectedId === ev.id}
-                  title="Open evaluation"
-                >
-                  <span className="font-medium mr-2">{ev.name}</span>
-                  <span className="text-xs text-gray-600">[{ev.level}]</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); deleteEvaluation(ev.id) }}
-                    className="ml-2 text-red-600 hover:bg-red-50"
-                    title="Delete evaluation"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              {evaluations.length === 0 && <div className="text-sm text-gray-600">No evaluations yet</div>}
+            <div className="flex items-center gap-2 mt-2">
+              <Select
+                value={selectedId || '__none__'}
+                onValueChange={(v) => {
+                  if (v === '__none__') setSelectedId(null)
+                  else setSelectedId(v)
+                }}
+              >
+                <SelectTrigger className="w-full max-w-md">
+                  <SelectValue placeholder={evaluations.length ? 'Select an evaluation' : 'No evaluations'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select none</SelectItem>
+                  {evaluations.map(ev => (
+                    <SelectItem key={ev.id} value={ev.id}>
+                      {ev.name} <span className="text-xs text-gray-600">[{ev.level}]</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!selectedId}
+                onClick={() => { if (selectedId) deleteEvaluation(selectedId) }}
+                className="text-red-600 hover:bg-red-50"
+                title="Delete selected evaluation"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
+            {evaluations.length === 0 && (
+              <div className="text-sm text-gray-600 mt-2">No evaluations yet</div>
+            )}
           </div>
         </div>
+
+        {!selectedId && (
+          <div className="border-t pt-6 text-sm text-gray-600">Select an evaluation to view its courses.</div>
+        )}
 
         {selectedId && (
           <div className="space-y-6 border-t pt-6">

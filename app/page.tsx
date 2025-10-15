@@ -332,7 +332,7 @@ export default function PhDTrackerPro() {
           <div className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="h-8 w-8 text-white animate-pulse" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Loading PhD Tracker Pro</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Loading Applications Tracker Pro</h2>
           <p className="text-gray-600">Setting up your academic journey...</p>
         </div>
       </div>
@@ -355,7 +355,7 @@ export default function PhDTrackerPro() {
                   />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">PhD Tracker Pro</h1>
+                <h1 className="text-lg font-bold text-gray-900">Application Tracker Pro</h1>
                 <p className="text-xs text-gray-500">Organise Your Grad Applications</p>
               </div>
             </div>
