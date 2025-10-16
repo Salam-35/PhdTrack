@@ -308,22 +308,41 @@ export default function Applications({ universities, setUniversities }: Applicat
           const upcomingLabel = isPast ? "Latest" : "Next"
 
           return (
-            <Card key={university.id} className="relative">
-              <CardHeader>
+            <Card
+              key={university.id}
+              className={`relative rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.01] border-l-4 ${
+                university.status === "accepted"
+                  ? "border-l-green-500"
+                  : university.status === "rejected"
+                  ? "border-l-red-500"
+                  : university.status === "submitted"
+                  ? "border-l-yellow-500"
+                  : university.status === "in-progress"
+                  ? "border-l-blue-500"
+                  : "border-l-gray-300"
+              } bg-gradient-to-br from-white via-gray-50 to-gray-100`}
+            >
+              {/* Header */}
+              <CardHeader className="p-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{university.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{university.program}</p>
-                    <p className="text-xs text-gray-500">{university.location}</p>
+                    <CardTitle className="text-lg font-bold text-gray-900">{university.name}</CardTitle>
+                    <p className="text-sm text-gray-600">{university.program}</p>
+                    <p className="text-xs text-gray-400">{university.location}</p>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(university)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                      onClick={() => handleEdit(university)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
                       onClick={() => deleteUniversity(university.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -331,131 +350,98 @@ export default function Applications({ universities, setUniversities }: Applicat
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+
+              {/* Body */}
+              <CardContent className="space-y-5 p-5 bg-gradient-to-br from-gray-50 to-white">
+                {/* Status Row */}
                 <div className="flex items-center justify-between">
-                  <Badge className={`${getStatusColor(university.status, university.acceptance_funding_status)} text-white`}>
+                  <Badge
+                    className={`${getStatusColor(
+                      university.status,
+                      university.acceptance_funding_status
+                    )} text-white text-xs font-medium px-2 py-1 rounded-full shadow`}
+                  >
                     {getStatusLabel(university.status, university.acceptance_funding_status)}
                   </Badge>
-                  <Badge className={getPriorityColor(university.priority)}>{university.priority} priority</Badge>
+                  <Badge
+                    className={`${getPriorityColor(
+                      university.priority
+                    )} text-xs font-medium rounded-full px-2 py-1 border-none shadow-sm`}
+                  >
+                    {university.priority} priority
+                  </Badge>
                 </div>
 
+                {/* Progress */}
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs text-gray-500">
                     <span>Progress</span>
                     <span>{getProgress(university.status)}%</span>
                   </div>
-                  <Progress value={getProgress(university.status)} className="h-2" />
+                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-500 ${
+                        university.status === "accepted"
+                          ? "bg-green-500"
+                          : university.status === "submitted"
+                          ? "bg-yellow-500"
+                          : university.status === "in-progress"
+                          ? "bg-blue-500"
+                          : "bg-gray-400"
+                      }`}
+                      style={{ width: `${getProgress(university.status)}%` }}
+                    ></div>
+                  </div>
                 </div>
 
+                {/* Info grid */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <DollarSign className="h-4 w-4 text-gray-400" />
                     <span>${university.application_fee}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Calendar className="h-4 w-4 text-gray-400" />
                     <span>
                       {upcomingDeadline
-                        ? `${upcomingLabel}: ${upcomingDeadline.term} • ${formatDeadlineDate(upcomingDeadline.deadline)}`
+                        ? `${upcomingLabel}: ${upcomingDeadline.term} • ${formatDeadlineDate(
+                            upcomingDeadline.deadline
+                          )}`
                         : deadlineDetails.deadlines.length > 0
-                          ? "No upcoming deadline"
-                          : "No deadlines recorded"}
+                        ? "No upcoming deadline"
+                        : "No deadlines recorded"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <FileText className="h-4 w-4 text-gray-400" />
                     <span>{university.sop_length} pages</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Users className="h-4 w-4 text-gray-400" />
                     <span>{university.gre_required ? "GRE Required" : "No GRE"}</span>
                   </div>
                 </div>
 
-                {university.gre_score && (
-                  <div className="text-sm">
-                    <span className="font-medium">GRE: </span>
-                    <span className="text-muted-foreground">{university.gre_score}</span>
-                  </div>
-                )}
-
-                {university.status === "accepted" && university.acceptance_funding_status && (
-                  <div className="text-sm">
-                    <span className="font-medium">Acceptance Funding: </span>
-                    <span className={university.acceptance_funding_status === "with-funding" ? "text-green-600 font-semibold" : "text-orange-600"}>
-                      {university.acceptance_funding_status === "with-funding" ? "Funded" :
-                       university.acceptance_funding_status === "without-funding" ? "Not Funded" :
-                       university.acceptance_funding_status === "pending" ? "Pending" : "Unknown"}
-                    </span>
-                  </div>
-                )}
-
-                {university.status !== "accepted" && university.funding_available && (
-                  <div className="text-sm">
-                    <span className="font-medium">Funding: </span>
-                    <span className="text-green-600">{university.funding_amount || "Available"}</span>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Requirements:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {university.requirements.slice(0, 3).map((req, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {req}
-                      </Badge>
-                    ))}
-                    {university.requirements.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{university.requirements.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
+                {/* Deadlines */}
+                <div
+                  className={`text-xs mt-2 ${
+                    countdownText === "All recorded deadlines have passed"
+                      ? "text-red-600 font-semibold"
+                      : daysUntil !== null && daysUntil < 30
+                      ? "text-orange-500 font-medium"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {countdownText}
                 </div>
 
-                {university.notes && (
-                  <div className="text-sm">
-                    <span className="font-medium">Notes: </span>
-                    <span className="text-muted-foreground">{university.notes.substring(0, 100)}...</span>
-                  </div>
-                )}
-
-                {deadlineDetails.deadlines.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Semester Deadlines</div>
-                    <div className="flex flex-wrap gap-2">
-                      {deadlineDetails.deadlines.map((deadline, index) => {
-                        const isCurrent = upcomingDeadline?.deadline === deadline.deadline
-                        return (
-                          <Badge
-                            key={`${deadline.term}-${deadline.deadline}-${index}`}
-                            variant={isCurrent ? "default" : "outline"}
-                            className={`text-xs ${isCurrent ? "bg-blue-600 text-white" : "border-blue-200 text-blue-700"}`}
-                          >
-                            {deadline.term}: {formatDeadlineDate(deadline.deadline)}
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                    {nextDeadline && (
-                      <div className="text-xs text-muted-foreground">
-                        Following: {nextDeadline.term} • {formatDeadlineDate(nextDeadline.deadline)}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div
-                    className={`text-xs ${daysUntil !== null && daysUntil < 30 ? "text-red-600 font-medium" : "text-muted-foreground"}`}
-                  >
-                    {countdownText}
-                  </div>
+                {/* Status Dropdown */}
+                <div className="flex justify-end">
                   <Select
                     value={university.status}
                     onValueChange={(value: University["status"]) => updateStatus(university.id, value)}
                   >
-                    <SelectTrigger className="w-32 h-8 text-xs">
+                    <SelectTrigger className="w-32 h-8 text-xs border-gray-300 bg-white shadow-sm hover:border-gray-400">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -472,6 +458,7 @@ export default function Applications({ universities, setUniversities }: Applicat
                 </div>
               </CardContent>
             </Card>
+
           )
         })}
       </div>

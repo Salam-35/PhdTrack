@@ -260,29 +260,29 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
             <div className="bg-blue-50/40 rounded-lg p-2 border border-blue-200/50">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
-                  <Label htmlFor="name" className="text-xs font-medium text-blue-900">University Name *</Label>
+                  <Label htmlFor="name" className="text-s font-medium text-red-900">University Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     required
-                    className="h-8 mt-0.5 text-sm border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-8 mt-0.5 text-sm border-red-200 focus:border-blue-500 focus:ring-blue-500"
                     placeholder="e.g., Stanford University"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="program" className="text-xs font-medium text-blue-900">Program *</Label>
+                  <Label htmlFor="program" className="text-s font-medium text-red-900">Program *</Label>
                   <Input
                     id="program"
                     value={formData.program}
                     onChange={(e) => setFormData((prev) => ({ ...prev, program: e.target.value }))}
                     required
-                    className="h-8 mt-0.5 text-sm border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                    className="h-8 mt-0.5 text-sm border-red-200 focus:border-blue-500 focus:ring-blue-500"
                     placeholder="e.g., Computer Science PhD"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="degree" className="text-xs font-medium text-blue-900">Degree Type</Label>
+                  <Label htmlFor="degree" className="text-s font-medium text-blue-900">Degree Type</Label>
                   <Select value={formData.degree} onValueChange={(value: "PhD" | "Masters") => setFormData((prev) => ({ ...prev, degree: value }))}>
                     <SelectTrigger className="h-8 mt-0.5 text-sm border-blue-200 focus:border-blue-500">
                       <SelectValue />
@@ -309,7 +309,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                       onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, gre_required: !!checked }))}
                       className="w-3.5 h-3.5"
                     />
-                    <Label htmlFor="gre_required" className="text-xs font-medium text-purple-900">GRE</Label>
+                    <Label htmlFor="gre_required" className="text-s font-medium text-purple-900">GRE</Label>
                     {formData.gre_required && (
                       <Input
                         id="gre_score"
@@ -322,20 +322,20 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="sop_length" className="text-xs font-medium text-purple-900">SOP:</Label>
+                    <Label htmlFor="sop_length" className="text-s font-medium text-purple-900">SOP:</Label>
                     <Input
                       id="sop_length"
                       type="number"
                       value={formData.sop_length}
                       onChange={(e) => setFormData((prev) => ({ ...prev, sop_length: e.target.value }))}
                       placeholder="2"
-                      className="h-7 w-14 text-xs border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                      className="h-7 w-14 text-s border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                     />
-                    <span className="text-xs text-gray-600">pages</span>
+                    <span className="text-s text-gray-600">pages</span>
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="application_fee" className="text-xs font-medium text-green-900">Fee:</Label>
+                    <Label htmlFor="application_fee" className="text-s font-medium text-green-900">Fee:</Label>
                     <div className="flex items-center">
                       <span className="text-xs text-gray-600 mr-0.5">$</span>
                       <Input
@@ -351,7 +351,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="status" className="text-xs font-medium text-green-900">Status:</Label>
+                    <Label htmlFor="status" className="text-s font-medium text-green-900">Status:</Label>
                     <Select value={formData.status} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}>
                       <SelectTrigger className="h-7 text-xs border-green-200 focus:border-green-500 w-32">
                         <SelectValue />
@@ -370,9 +370,9 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="priority" className="text-xs font-medium text-green-900">Priority:</Label>
+                    <Label htmlFor="priority" className="text-s font-medium text-green-900">Priority:</Label>
                     <Select value={formData.priority} onValueChange={(value: any) => setFormData((prev) => ({ ...prev, priority: value }))}>
-                      <SelectTrigger className="h-7 text-xs border-green-200 focus:border-green-500 w-24">
+                      <SelectTrigger className="h-7 text-s border-green-200 focus:border-green-500 w-24">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -393,7 +393,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                       onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, funding_available: !!checked }))}
                       className="w-3.5 h-3.5"
                     />
-                    <Label htmlFor="funding_available" className="text-xs font-medium text-purple-900">Funding</Label>
+                    <Label htmlFor="funding_available" className="text-s font-medium text-purple-900">Funding</Label>
                   </div>
 
                   {formData.funding_available && (
@@ -403,7 +403,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                         value={formData.funding_amount}
                         onChange={(e) => setFormData((prev) => ({ ...prev, funding_amount: e.target.value }))}
                         placeholder="$55k/year"
-                        className="h-7 w-24 text-xs border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                        className="h-7 w-24 text-s border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                       />
 
                       <div className="flex items-center gap-1.5">
@@ -411,7 +411,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                           {formData.funding_types.map((type) => (
                             <span
                               key={type}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-s font-medium"
                             >
                               {type}
                               <button
@@ -428,7 +428,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                         </div>
 
                         <Select value={newFundingType} onValueChange={setNewFundingType}>
-                          <SelectTrigger className="h-7 w-28 text-xs border-purple-200 focus:border-purple-500">
+                          <SelectTrigger className="h-7 w-28 text-s border-purple-200 focus:border-purple-500">
                             <SelectValue placeholder="Add type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -481,59 +481,83 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-purple-900">Semesters & Deadlines</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={addSemester}
-                  className="h-8 px-2 text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" /> Add Semester
-                </Button>
+                <Label className="text-sm font-semibold text-purple-900">
+                  Semesters & Deadlines
+                </Label>
               </div>
-              <div className="space-y-2">
+
+              <div className="space-y-3">
                 {semesterDeadlines.map((entry, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-2">
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 md:grid-cols-7 gap-3 p-3 bg-gradient-to-r from-purple-50 via-white to-purple-50 border border-purple-100 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+                  >
+                    {/* TERM */}
                     <div className="md:col-span-3">
-                      <Label className="text-xs font-medium text-purple-900">Semester / Term</Label>
+                      <Label className="text-sm font-medium text-purple-900">
+                        Semester / Term
+                      </Label>
                       <Input
                         value={entry.term}
                         onChange={(e) => updateSemesterEntry(index, { term: e.target.value })}
                         placeholder="e.g., Fall 2025"
-                        className="h-8 mt-0.5 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                        className="h-9 mt-1 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                       />
                     </div>
+
+                    {/* DEADLINE */}
                     <div className="md:col-span-2">
-                      <Label className="text-xs font-medium text-purple-900">Deadline</Label>
+                      <Label className="text-sm font-medium text-purple-900">
+                        Deadline
+                      </Label>
                       <Input
                         type="date"
                         value={entry.deadline}
                         onChange={(e) => updateSemesterEntry(index, { deadline: e.target.value })}
-                        className="h-8 mt-0.5 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                        className="h-9 mt-1 text-sm border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                       />
                     </div>
-                    <div className="md:col-span-1 flex items-end">
+
+                    {/* ACTION BUTTONS */}
+                    <div className="md:col-span-2 flex items-end justify-end gap-2">
+                      {/* REMOVE */}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => removeSemester(index)}
-                        className="h-8 w-8 text-red-600 hover:bg-red-50"
+                        className="h-9 w-9 text-red-600 hover:bg-red-50"
                         disabled={semesterDeadlines.length === 1}
-                        aria-label="Remove semester deadline"
+                        aria-label="Remove semester"
                       >
                         <X className="h-4 w-4" />
                       </Button>
+
+                      {/* ADD (INLINE) */}
+                      {index === semesterDeadlines.length - 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addSemester}
+                          className="h-9 px-3 text-sm text-purple-700 border-purple-300 hover:bg-purple-50"
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500">Add multiple semesters to track rolling deadlines. The nearest upcoming deadline is highlighted across the app.</p>
+
+              <p className="text-xs text-gray-500 pl-1">
+                Add multiple semesters to track rolling deadlines. The nearest upcoming deadline is highlighted across the app.
+              </p>
             </div>
 
+            {/*
             <div className="bg-purple-50/30 rounded-lg p-3 border border-purple-200/40">
               <div className="flex flex-wrap gap-4 items-center">
                 <div className="flex items-center gap-2">
@@ -617,6 +641,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
                 </div>
               )}
             </div>
+            */}
 
             {formData.status === "accepted" && (
               <div className="bg-yellow-50/40 rounded-lg p-2 border border-yellow-200/50">
@@ -646,7 +671,7 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Label className="text-xs font-medium text-indigo-900 cursor-pointer">Application Requirements</Label>
+                    <Label className="text-s font-medium text-indigo-900 cursor-pointer">Application Requirements</Label>
                     {formData.requirements.length > 0 && (
                       <Badge variant="outline" className="text-xs h-5 bg-indigo-100 text-indigo-800 border-indigo-300">
                         {formData.requirements.length}
@@ -696,27 +721,41 @@ export default function UniversityForm({ onClose, onSave, university }: Universi
 
             <div className="bg-gray-50/40 rounded-lg p-2 border border-gray-200/50">
               <div>
-                <Label htmlFor="notes" className="text-xs font-medium text-gray-900">Additional Notes</Label>
+                <Label htmlFor="notes" className="text-s font-medium text-gray-900">Additional Notes</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
                   placeholder="Any additional information about this application..."
-                  rows={2}
-                  className="mt-0.5 text-sm resize-none border-gray-200 focus:border-gray-500 focus:ring-gray-500"
+                  rows={1}
+                  className="mt-0.5 h-9 text-sm py-1.5 border-gray-200 focus:border-gray-500 focus:ring-gray-500 resize-none"
+                  style={{ minHeight: "36px" }}
                 />
+
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2 pt-1">
-              <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                onClick={onClose}
+                className="px-5 py-2.5 text-sm font-medium hover:bg-gray-100 transition-all"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading} size="sm">
-                {loading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              <Button
+                type="submit"
+                disabled={loading}
+                size="default"
+                className="px-5 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all"
+              >
+                {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {university ? "Update" : "Add"}
               </Button>
             </div>
+
           </form>
         </CardContent>
       </Card>
