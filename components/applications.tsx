@@ -7,7 +7,23 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Edit, Trash2, DollarSign, Calendar, FileText, Users, Search, Plus, GraduationCap } from "lucide-react"
+import {
+  Edit,
+  Trash2,
+  DollarSign,
+  Calendar,
+  FileText,
+  Users,
+  Search,
+  Plus,
+  GraduationCap,
+  Building,
+  BookOpen,
+  MapPin,
+  Flag,
+  TrendingUp,
+  Clock,
+} from "lucide-react"
 import { db, type University } from "@/lib/supabase"
 import { sanitizeDeadlines, getDeadlineInfo, daysUntilDeadline } from "@/lib/university-deadlines"
 import { toast } from "@/hooks/use-toast"
@@ -74,14 +90,19 @@ export default function Applications({ universities, setUniversities }: Applicat
   }
 
   const updateStatus = async (id: string, newStatus: University["status"]) => {
+    // Optimistic update: update local state first
+    const prev = universities
+    setUniversities(prev.map((uni) => (uni.id === id ? { ...uni, status: newStatus } : uni)))
     try {
       const updatedUniversity = await db.updateUniversity(id, { status: newStatus })
-      setUniversities(universities.map((uni) => (uni.id === id ? updatedUniversity : uni)))
+      setUniversities((curr) => curr.map((u) => (u.id === id ? updatedUniversity : u)))
       toast({
         title: "Status Updated",
         description: `Application status updated to ${newStatus.replace("-", " ")}`,
       })
     } catch (error) {
+      // Revert on failure
+      setUniversities(prev)
       toast({
         title: "Error",
         description: "Failed to update status.",
@@ -306,81 +327,121 @@ export default function Applications({ universities, setUniversities }: Applicat
               ? "All recorded deadlines have passed"
               : "No deadlines recorded"
           const upcomingLabel = isPast ? "Latest" : "Next"
-
+           {/* hover:shadow-xl transition-all duration-300 hover:scale-[1.02] */}
           return (
             <Card
               key={university.id}
-              className={`relative rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg hover:scale-[1.01] border-l-4 ${
+              className={`relative overflow-hidden border hover:shadow-md transition-shadow ${
                 university.status === "accepted"
-                  ? "border-l-green-500"
+                  ? "border-green-200 bg-green-50/30"
                   : university.status === "rejected"
-                  ? "border-l-red-500"
-                  : university.status === "submitted"
-                  ? "border-l-yellow-500"
-                  : university.status === "in-progress"
-                  ? "border-l-blue-500"
-                  : "border-l-gray-300"
-              } bg-gradient-to-br from-white via-gray-50 to-gray-100`}
+                  ? "border-red-200 bg-red-50/30"
+                  : university.status === "submitted" || university.status === "under-review"
+                  ? "border-yellow-200 bg-yellow-50/30"
+                  : "border-gray-200 bg-white"
+              }`}
             >
               {/* Header */}
-              <CardHeader className="p-5 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-bold text-gray-900">{university.name}</CardTitle>
-                    <p className="text-sm text-gray-600">{university.program}</p>
-                    <p className="text-xs text-gray-400">{university.location}</p>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                      <CardTitle className="text-base font-semibold text-gray-900 truncate">
+                        {university.name}
+                      </CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                      <BookOpen className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{university.program}</span>
+                    </div>
+
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
-                      onClick={() => handleEdit(university)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
-                      onClick={() => deleteUniversity(university.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          university.status === "accepted"
+                            ? "bg-green-500"
+                            : university.status === "rejected"
+                            ? "bg-red-500"
+                            : university.status === "submitted"
+                            ? "bg-yellow-500"
+                            : university.status === "in-progress"
+                            ? "bg-blue-500"
+                            : "bg-gray-400"
+                        }`}
+                      ></div>
+                      <Badge
+                        className={`${getStatusColor(
+                          university.status,
+                          university.acceptance_funding_status
+                        )} text-white text-s px-2 py-0.5`}
+                      >
+                        {getStatusLabel(university.status, university.acceptance_funding_status)}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleEdit(university)}
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-gray-600 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => deleteUniversity(university.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
+                </div>
+
+                {/* Deadline & Priority Row */}
+                <div className="flex items-center justify-between gap-2 mt-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                    <span className={`text-s font-bold ${
+                      isPast
+                        ? "text-red-600"
+                        : daysUntil !== null && daysUntil < 20
+                        ? "text-orange-600"
+                        : "text-blue-800"
+                    }`}>
+                      {isPast
+                        ? "All deadlines passed"
+                        : daysUntil !== null
+                        ? `${daysUntil} day${Math.abs(daysUntil) === 1 ? "" : "s"} remaining`
+                        : "No deadline set"}
+                    </span>
+                  </div>
+                  <Badge
+                    className={`${getPriorityColor(university.priority)} text-xs px-2 py-0.5`}
+                  >
+                    {university.priority}
+                  </Badge>
                 </div>
               </CardHeader>
 
               {/* Body */}
-              <CardContent className="space-y-5 p-5 bg-gradient-to-br from-gray-50 to-white">
-                {/* Status Row */}
-                <div className="flex items-center justify-between">
-                  <Badge
-                    className={`${getStatusColor(
-                      university.status,
-                      university.acceptance_funding_status
-                    )} text-white text-xs font-medium px-2 py-1 rounded-full shadow`}
-                  >
-                    {getStatusLabel(university.status, university.acceptance_funding_status)}
-                  </Badge>
-                  <Badge
-                    className={`${getPriorityColor(
-                      university.priority
-                    )} text-xs font-medium rounded-full px-2 py-1 border-none shadow-sm`}
-                  >
-                    {university.priority} priority
-                  </Badge>
-                </div>
-
-                {/* Progress */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>Progress</span>
-                    <span>{getProgress(university.status)}%</span>
+              <CardContent className="space-y-3">
+                {/* Progress Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Progress
+                    </span>
+                    <span className="font-medium">{getProgress(university.status)}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
                     <div
-                      className={`h-2 rounded-full transition-all duration-500 ${
+                      className={`h-full transition-all duration-500 ${
                         university.status === "accepted"
                           ? "bg-green-500"
                           : university.status === "submitted"
@@ -394,54 +455,81 @@ export default function Applications({ universities, setUniversities }: Applicat
                   </div>
                 </div>
 
-                {/* Info grid */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <DollarSign className="h-4 w-4 text-gray-400" />
-                    <span>${university.application_fee}</span>
+                {/* Funding Information */}
+                {university.acceptance_funding_status === "with-funding" && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-1.5">
+                    <div className="flex items-center gap-2 text-green-700">
+                      <DollarSign className="h-4 w-4" />
+                      <span className="text-xs font-semibold">Funding Awarded</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Amount</span>
+                      <span className="font-semibold text-green-700">
+                        {university.funding_amount ? String(university.funding_amount) : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Types</span>
+                      <span className="font-medium text-gray-900 truncate text-right">
+                        {(university.funding_types || []).length > 0
+                          ? (university.funding_types || []).join(", ")
+                          : "N/A"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <span>
-                      {upcomingDeadline
-                        ? `${upcomingLabel}: ${upcomingDeadline.term} • ${formatDeadlineDate(
-                            upcomingDeadline.deadline
-                          )}`
-                        : deadlineDetails.deadlines.length > 0
-                        ? "No upcoming deadline"
-                        : "No deadlines recorded"}
-                    </span>
+                )}
+
+                {/* Info Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                    <DollarSign className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-gray-500">App Fee</p>
+                      <p className="font-semibold text-xs text-gray-900 truncate">
+                        ${university.application_fee}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span>{university.sop_length} pages</span>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                    <Calendar className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-gray-500">Deadline</p>
+                      <p className="font-semibold text-gray-900 truncate">
+                        {upcomingDeadline
+                          ? formatDeadlineDate(upcomingDeadline.deadline)
+                          : deadlineDetails.deadlines.length > 0
+                          ? "No upcoming"
+                          : "Not set"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span>{university.gre_required ? "GRE Required" : "No GRE"}</span>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                    <FileText className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-gray-500">SOP</p>
+                      <p className="font-semibold text-gray-900 truncate">
+                        {university.sop_length} pages
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                    <Users className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-gray-500">GRE</p>
+                      <p className="font-semibold text-gray-900 text-[11px] truncate">
+                        {university.gre_required ? "Required" : "Optional"}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Deadlines */}
-                <div
-                  className={`text-xs mt-2 ${
-                    countdownText === "All recorded deadlines have passed"
-                      ? "text-red-600 font-semibold"
-                      : daysUntil !== null && daysUntil < 30
-                      ? "text-orange-500 font-medium"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {countdownText}
-                </div>
-
-                {/* Status Dropdown */}
-                <div className="flex justify-end">
+                {/* Status Update */}
+                <div className="pt-2 border-t">
                   <Select
                     value={university.status}
                     onValueChange={(value: University["status"]) => updateStatus(university.id, value)}
                   >
-                    <SelectTrigger className="w-32 h-8 text-xs border-gray-300 bg-white shadow-sm hover:border-gray-400">
+                    <SelectTrigger className="w-full h-8 text-s">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -458,6 +546,7 @@ export default function Applications({ universities, setUniversities }: Applicat
                 </div>
               </CardContent>
             </Card>
+
 
           )
         })}

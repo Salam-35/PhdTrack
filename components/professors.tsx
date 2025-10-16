@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { supabase } from "@/lib/supabase"
 import { useUser } from "@/components/UserProvider"
 import ProfessorForm from "@/components/forms/professor-form"
@@ -295,6 +296,22 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
   const openNewProfessorForm = () => {
     setEditingProfessor(null) // Make sure this is null for new professor
     setOpenForm(true)
+  }
+
+  const toggleFollowedUp = async (prof: any, value: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("professors")
+        .update({ ifFowllowedUp: value })
+        .eq("id", prof.id)
+      if (error) {
+        console.warn("Could not persist ifFowllowedUp (ensure column exists):", error)
+      }
+    } catch (e) {
+      console.warn("Failed to update ifFowllowedUp:", e)
+    } finally {
+      setPropProfessors(prev => prev.map(p => p.id === prof.id ? { ...p, ifFowllowedUp: value } : p))
+    }
   }
 
   const isGlobalSearchActive = Boolean(searchQuery?.trim())
@@ -623,124 +640,151 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {filteredProfessors.map((professor) => {
             const StatusIcon = statusConfig[professor.contact_status as keyof typeof statusConfig]?.icon || Clock
-            const statusColor = statusConfig[professor.contact_status as keyof typeof statusConfig]?.color || "bg-gray-100 text-gray-800"
+            const statusColor = statusConfig[professor.contact_status as keyof typeof statusConfig]?.color || "bg-black-100 text-black-800"
             const statusLabel = statusConfig[professor.contact_status as keyof typeof statusConfig]?.label || professor.contact_status
             const followUpStatus = getFollowUpStatus(professor)
             const localTime = formatLocalTime(now, professor.timezone)
             const referenceNextMorning = getReferenceTimeAtNextMorning(now, professor.timezone, referenceTimezone)
 
             return (
-              <Card key={professor.id} className={`relative ${followUpStatus.needsFollowUp ? 'border-red-300 bg-red-50/50' : ''}`}>
+              <Card
+  key={professor.id}
+  className={`relative overflow-hidden rounded-xl shadow-sm border transition-all duration-200 hover:shadow-md ${
+    followUpStatus.needsFollowUp ? "border-red-300 bg-red-50/50" : "border-gray-200 bg-white"
+  }`}
+>
+  {/* Edit button moved to bottom actions */}
+
+  {/* Inner Grid (Main Content) */}
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4">
+    {/* Professor Info (wider) */}
+    <div className="md:col-span-3 bg-purple-50 border border-purple-100 rounded-lg p-3">
+      <h4 className="text-sm font-semibold text-purple-800 mb-1">Professor Info</h4>
+      <ul className="text-sm text-gray-700 space-y-1">
+        <li>
+          <span className="font-medium">Name:</span> {professor.name}
+        </li>
+        <li>
+          <span className="font-medium">University:</span> {professor.university}
+        </li>
+        {professor.department && (
+          <li>
+            <span className="font-medium">Department:</span> {professor.department}
+          </li>
+        )}
+        <li>
+          <span className="font-medium">Email:</span>{" "}
+          <a
+            href={`mailto:${professor.email}`}
+            className="text-blue-700 hover:underline break-all"
+          >
+            {professor.email}
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    {/* Contact & Time Info */}
+    <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
+      <h4 className="text-sm font-semibold text-blue-800 mb-1">Contact & Time</h4>
+      <div className="space-y-1 text-sm text-gray-700">
+        {/* Follow-up checkbox */}
+        <label className="flex items-center gap-2 mb-1">
+          <Checkbox
+            checked={Boolean((professor as any).ifFowllowedUp)}
+            onCheckedChange={(checked) => toggleFollowedUp(professor, Boolean(checked))}
+          />
+          <span className="text-xs text-gray-700">Followed up</span>
+        </label>
+        {professor.mailing_date && (
+          <div className="flex justify-between">
+            <span className="font-medium">Contact Date:</span>
+            <span>{new Date(professor.mailing_date).toLocaleDateString()}</span>
+          </div>
+        )}
+        {followUpStatus.needsFollowUp && !Boolean((professor as any).ifFowllowedUp) && (
+          <p className="text-red-600 text-xs">
+            {followUpStatus.days} days ago – follow up soon
+          </p>
+        )}
+        {localTime && (
+          <div className="flex justify-between">
+            <span className="font-medium">Local Time:</span>
+            <span>{localTime}</span>
+          </div>
+        )}
+        {referenceNextMorning && (
+          <div className="flex justify-between">
+            <span className="font-medium">{referenceTimezoneLabel}:</span>
+            <span>{referenceNextMorning}</span>
+          </div>
+        )}
+        <div className="pt-1">
+          <Badge className={`${statusColor} flex items-center gap-1 px-2 py-0.5 text-xs font-medium border` }>
+            <StatusIcon className="h-3 w-3" />
+            {statusLabel}
+          </Badge>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Notes Section */}
+  {professor.notes && (
+    <div className="bg-gray-50 border-t border-gray-100 px-4 py-3">
+      <p className="text-sm font-medium text-gray-800 mb-1">Notes:</p>
+      <p className="text-sm text-gray-600 line-clamp-3">{professor.notes}</p>
+    </div>
+  )}
+
+  {/* Action Buttons */}
+  <CardContent className="space-y-2 pt-3">
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        onClick={() => openEmailGenerator(professor)}
+        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+      >
+        <Wand2 className="h-4 w-4 mr-1" />
+        AI Email
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => sendEmail(professor.email, professor.name)}
+        className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+      >
+        <Mail className="h-4 w-4 mr-1" />
+        Quick Email
+      </Button>
+    </div>
+
+    <div className="flex items-center justify-between">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => handleDelete(professor.id, professor.name)}
+        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+      >
+        <Trash2 className="h-4 w-4 mr-1" /> Delete
+      </Button>
+
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => openEdit(professor)}
+        className="text-purple-700 hover:text-purple-800 hover:bg-purple-50 border-purple-200"
+      >
+        <Edit className="h-4 w-4 mr-1" /> Edit
+      </Button>
+    </div>
+  </CardContent>
+</Card>
 
 
-                {/* {followUpStatus.needsFollowUp && (
-                  <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    Follow up needed!
-                  </div>
-                )}
-                */}
-                
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{professor.name}</CardTitle>
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-600 font-medium">{professor.university}</p>
-                        {professor.department && (
-                          <p className="text-sm text-gray-500">{professor.department}</p>
-                        )}
-                        <p className="text-sm text-gray-600">{professor.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
-                      <Badge className={`${statusColor} border flex items-center gap-1 text-xs px-2 py-0.5`}>
-                        <StatusIcon className="h-3 w-3" />
-                        {statusLabel}
-                      </Badge>
-                      {localTime && (
-                        <span className="inline-flex items-center rounded border bg-white px-2 py-0.5 text-gray-700">
-                          Local: {localTime}
-                        </span>
-                      )}
-                      {referenceNextMorning && (
-                        <span className="inline-flex items-center rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-purple-700">
-                          {referenceTimezoneLabel}: {referenceNextMorning}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Contact Information */}
-                  {professor.mailing_date && (
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Contact Date:</span>
-                        <span>{new Date(professor.mailing_date).toLocaleDateString()}</span>
-                      </div>
-                      {followUpStatus.needsFollowUp && (
-                        <div className="text-red-600 text-xs mt-1">
-                          {followUpStatus.days} days ago - Consider following up
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {professor.notes && (
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-sm font-medium mb-1 text-blue-800">Notes:</p>
-                      <p className="text-sm text-blue-700 line-clamp-3">{professor.notes}</p>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="space-y-2 pt-2">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => openEmailGenerator(professor)}
-                        className="flex-1 bg-purple-600 hover:bg-purple-700"
-                      >
-                        <Wand2 className="h-4 w-4 mr-1" />
-                        AI Email
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => sendEmail(professor.email, professor.name)}
-                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
-                      >
-                        <Mail className="h-4 w-4 mr-1" />
-                        Quick Email
-                      </Button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEdit(professor)}
-                        className="flex-1"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(professor.id, professor.name)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             )
           })}
         </div>
