@@ -75,10 +75,10 @@ export default function ProfessorForm({ open, setOpen, editingProfessor, refresh
       return
     }
 
-    if (!formData.name || !formData.university || !formData.email) {
+    if (!formData.name || !formData.email) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields (Name, University, Email)",
+        description: "Please fill in all required fields (Name, Email)",
         variant: "destructive",
       })
       return
@@ -162,7 +162,7 @@ export default function ProfessorForm({ open, setOpen, editingProfessor, refresh
               </Label>
               <Input
                 id="name"
-                placeholder="e.g., Dr. Sarah Chen"
+                placeholder="e.g., Abdus Salam"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
                 className="w-full"
@@ -175,7 +175,7 @@ export default function ProfessorForm({ open, setOpen, editingProfessor, refresh
               <Input
                 id="email"
                 type="email"
-                placeholder="professor@university.edu"
+                placeholder="e.g., salam35.ruet17@gmail.com"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 className="w-full"
@@ -186,7 +186,7 @@ export default function ProfessorForm({ open, setOpen, editingProfessor, refresh
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="university" className="text-sm font-medium">
-                University <span className="text-red-500">*</span>
+                University
               </Label>
               <Input
                 id="university"

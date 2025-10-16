@@ -215,7 +215,7 @@ export const db = {
   // User Profile Operations
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      console.log("🔍 Fetching profile for userId:", userId)
+      console.log("🔍 Fetching profile for user information")
       const { data, error } = await supabase
         .from("profiles")
         .select("*")

@@ -344,9 +344,9 @@ export default function PhDTrackerPro() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-primary-200">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+        <div className="px-3 sm:px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className=" items-center justify-center">
                   <img
                     src="/logo.png"
@@ -355,12 +355,12 @@ export default function PhDTrackerPro() {
                   />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Application Tracker Pro</h1>
-                <p className="text-xs text-gray-500">Organise Your Grad Applications</p>
+                <h1 className="text-base sm:text-lg font-bold text-gray-900">Application Tracker</h1>
+                <p className="hidden xs:block text-xs text-gray-500">Organise Your Grad Applications</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 sm:gap-3">
 
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -368,7 +368,7 @@ export default function PhDTrackerPro() {
                   placeholder="Search applications, professors, documents..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-80 bg-white border-gray-300 shadow-sm focus:shadow-md transition-shadow"
+                  className="pl-10 w-full max-w-[11rem] sm:max-w-[16rem] md:max-w-[20rem] bg-white border-gray-300 shadow-sm focus:shadow-md transition-shadow"
                 />
               </div>
             {/*

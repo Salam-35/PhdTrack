@@ -286,7 +286,7 @@ export default function Dashboard({
                         <p className="text-xs uppercase tracking-wide text-gray-500">{item.label}</p>
                         <p className={`mt-2 text-2xl font-bold ${item.textColor}`}>{item.value}</p>
                       </div>
-                      <div className={`bg-gradient-to-br ${item.gradient} text-white rounded-lg p-2.5`}>
+                      <div className={`hidden sm:block bg-gradient-to-br ${item.gradient} text-white rounded-lg p-2.5`}>
                         <Icon className="h-5 w-5" />
                       </div>
                     </div>
@@ -298,7 +298,7 @@ export default function Dashboard({
         )
 
         return (
-          <div className="grid grid-cols-2 gap-5 xl:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {renderGridBox("At-a-glance Stats", primaryStats)}
             {renderGridBox("Application Progress", progressStats)}
           </div>

@@ -490,28 +490,29 @@ export default function SettingsPage() {
             <span>Profile Picture</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center space-x-6">
-          <Avatar className="h-24 w-24">
+        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+          <Avatar className="h-24 w-24 shrink-0">
             <AvatarImage src={profile.avatar_url} alt="Profile picture" />
             <AvatarFallback className="text-lg">
               {(profile.first_name?.[0] || "") + (profile.last_name?.[0] || "")}
             </AvatarFallback>
           </Avatar>
-          <div className="space-y-2">
-            <div className="flex space-x-2">
-              <Button 
+          <div className="w-full sm:w-auto space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                className="bg-primary-500 hover:bg-primary-600"
+                className="bg-primary-500 hover:bg-primary-600 w-full sm:w-auto"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                 Upload New Photo
               </Button>
               {profile.avatar_url && (
-                <Button 
+                <Button
                   variant="destructive"
                   onClick={handleAvatarDelete}
                   disabled={loading}
+                  className="w-full sm:w-auto"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
                   Delete
