@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useUser } from "@/components/UserProvider"
 import { db } from "@/lib/supabase"
+import { sanitizeDeadlines, getDeadlineInfo } from "@/lib/university-deadlines"
 import { useSearchParams, useRouter } from "next/navigation"
 import {
   SettingsIcon,
@@ -322,6 +323,11 @@ export default function SettingsPage() {
         db.getProfessors(user.id),
       ])
 
+      const formatDate = (value: string) => {
+        const parsed = new Date(value)
+        return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString()
+      }
+
       // Use browser-ready build to avoid Node polyfills issues
       const XLSXModule = await import("xlsx/dist/xlsx.full.min.js")
       const XLSX = XLSXModule.default || XLSXModule
@@ -334,7 +340,15 @@ export default function SettingsPage() {
         Location: uni.location,
         Ranking: uni.ranking,
         "Application Fee": uni.application_fee,
-        Deadline: uni.deadline,
+        "Next Deadline": (() => {
+          const deadlines = sanitizeDeadlines(uni.deadlines, uni.deadline ?? undefined)
+          const info = getDeadlineInfo(deadlines)
+          return info.current ? formatDate(info.current.deadline) : ""
+        })(),
+        "All Deadlines": (() => {
+          const deadlines = sanitizeDeadlines(uni.deadlines, uni.deadline ?? undefined)
+          return deadlines.map((d) => `${d.term}: ${formatDate(d.deadline)}`).join("; ")
+        })(),
         Status: uni.status,
         Requirements: (uni.requirements || []).join(", "),
         "GRE Required": uni.gre_required ? "Yes" : "No",
@@ -384,7 +398,8 @@ export default function SettingsPage() {
         "Location",
         "Ranking",
         "Application Fee",
-        "Deadline",
+        "Next Deadline",
+        "All Deadlines",
         "Status",
         "Requirements",
         "GRE Required",

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useUser } from "@/components/UserProvider"
 import { supabase } from "@/lib/supabase"
+import { sanitizeDeadlines, getDeadlineInfo, daysUntilDeadline } from "@/lib/university-deadlines"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -53,6 +54,23 @@ export default function Dashboard({
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   // Remove local university edit state since we'll use parent state
+
+  const getUniversityDeadlineDetails = (university: any) => {
+    const normalized = sanitizeDeadlines(university?.deadlines, university?.deadline ?? undefined)
+    const info = getDeadlineInfo(normalized)
+    return {
+      deadlines: normalized,
+      upcoming: info.current,
+      next: info.next,
+      daysUntil: !info.isPast ? daysUntilDeadline(info.current) : null,
+      isPast: info.isPast,
+    }
+  }
+
+  const formatDeadlineDate = (value: string) => {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString()
+  }
 
   useEffect(() => {
     // Fixed: Check for user properly
@@ -280,7 +298,7 @@ export default function Dashboard({
         )
 
         return (
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <div className="grid grid-cols-2 gap-5 xl:grid-cols-2">
             {renderGridBox("At-a-glance Stats", primaryStats)}
             {renderGridBox("Application Progress", progressStats)}
           </div>
@@ -333,12 +351,24 @@ export default function Dashboard({
                   return "❓ Status Unknown"
                 }
 
-                return (
-                  <div
-                    key={i}
-                    onClick={() => onEditUniversity?.(uni)}
-                    className="p-5 bg-white border border-green-300 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.03] group"
-                  >
+                const deadlineDetails = getUniversityDeadlineDetails(uni)
+                const upcomingDeadline = deadlineDetails.upcoming
+                const nextDeadline = deadlineDetails.next
+                const daysUntil = deadlineDetails.daysUntil
+                const isPast = deadlineDetails.isPast
+                const upcomingLabel = isPast ? "Latest" : "Next"
+                const countdownSuffix = daysUntil !== null
+                  ? ` (${daysUntil} day${Math.abs(daysUntil) === 1 ? "" : "s"})`
+                  : deadlineDetails.deadlines.length > 0 && isPast
+                    ? " (completed)"
+                    : ""
+
+              return (
+                <div
+                  key={i}
+                  onClick={() => onEditUniversity?.(uni)}
+                  className="p-5 bg-white border border-green-300 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.03] group"
+                >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-gray-900 truncate text-lg group-hover:text-green-700 transition-colors">
@@ -352,12 +382,27 @@ export default function Dashboard({
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-gray-500">
-                      {uni.deadline && (
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          <span>Deadline: {new Date(uni.deadline).toLocaleDateString()}</span>
-                        </div>
-                      )}
+                      <div className="space-y-1">
+                        {upcomingDeadline ? (
+                          <div className="flex items-center">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            <span>
+                              {upcomingLabel}: {upcomingDeadline.term} • {formatDeadlineDate(upcomingDeadline.deadline)}
+                              {countdownSuffix}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center text-gray-400">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            <span>No upcoming deadline</span>
+                          </div>
+                        )}
+                        {nextDeadline && (
+                          <div className="pl-4 text-gray-400">
+                            Following: {nextDeadline.term} • {formatDeadlineDate(nextDeadline.deadline)}
+                          </div>
+                        )}
+                      </div>
                       <div className="text-xs text-green-600 font-semibold group-hover:text-green-700">
                         Click to edit ✎️
                       </div>

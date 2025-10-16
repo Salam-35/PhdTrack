@@ -83,11 +83,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data: { user: authUser } } = await supabase.auth.getUser()
 
       if (!userProfile && authUser && authUser.id === userId) {
-        try {
-          userProfile = await db.createDefaultProfile(authUser)
-        } catch (creationError) {
-          console.error('Error creating default profile:', creationError)
-        }
+        console.warn('No profile found for user; skipping automatic profile creation.')
       } else if (userProfile && authUser && authUser.id === userId) {
         const { firstName, lastName, displayName, avatarUrl } = extractProfileDetails(authUser)
         const updates: Partial<UserProfile> = {}
