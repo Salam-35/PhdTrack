@@ -15,7 +15,11 @@ import {
   Bell,
   Filter,
   LogOut,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -55,6 +59,7 @@ const navigationItems = [
 ]
 
 export default function PhDTrackerPro() {
+  const { theme, setTheme, resolvedTheme } = useTheme()
   const { user, profile, signOut, loading: userLoading } = useUser()
   const [activeTab, setActiveTab] = useState("dashboard")
   const [searchQuery, setSearchQuery] = useState("")
@@ -341,9 +346,9 @@ export default function PhDTrackerPro() {
 
   // This component will only render if user is authenticated (due to AuthGuard)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-primary-200">
+      <header className="bg-card shadow-sm border-b border-border">
         <div className="px-3 sm:px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -355,20 +360,20 @@ export default function PhDTrackerPro() {
                   />
               </div>
               <div>
-                <h1 className="text-base sm:text-lg font-bold text-gray-900">Application Tracker</h1>
-                <p className="hidden xs:block text-xs text-gray-500">Organise Your Grad Applications</p>
+                <h1 className="text-base sm:text-lg font-bold text-foreground">Application Tracker</h1>
+                <p className="hidden xs:block text-xs text-muted-foreground">Organise Your Grad Applications</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
 
-              <div className="relative">
+              <div className="relative hidden sm:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search applications, professors, documents..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-full max-w-[11rem] sm:max-w-[16rem] md:max-w-[20rem] bg-white border-gray-300 shadow-sm focus:shadow-md transition-shadow"
+                  className="pl-10 w-full max-w-[16rem] md:max-w-[20rem]"
                 />
               </div>
             {/*
@@ -383,6 +388,32 @@ export default function PhDTrackerPro() {
                 <Filter className="h-5 w-5" />
               </Button>
               */}
+
+              {/* Theme Toggle */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary-50">
+                    {resolvedTheme === 'dark' ? (
+                      <Moon className="h-5 w-5" />
+                    ) : resolvedTheme === 'light' ? (
+                      <Sun className="h-5 w-5" />
+                    ) : (
+                      <Monitor className="h-5 w-5" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem onClick={() => setTheme('light')}>
+                    <Sun className="mr-2 h-4 w-4" /> Light
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme('dark')}>
+                    <Moon className="mr-2 h-4 w-4" /> Dark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme('system')}>
+                    <Monitor className="mr-2 h-4 w-4" /> System
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* User Menu */}
               <DropdownMenu>
@@ -502,7 +533,7 @@ export default function PhDTrackerPro() {
       </Button>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg z-30">
         <div className="grid grid-cols-5 gap-1 p-2">
           {navigationItems.slice(0, 5).map((item) => {
             const Icon = item.icon
@@ -512,7 +543,9 @@ export default function PhDTrackerPro() {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-colors ${
-                  isActive ? "bg-primary-100 text-primary-600" : "text-gray-500 hover:text-gray-700"
+                  isActive
+                    ? "bg-primary-100 text-primary-600 dark:bg-primary-900/20 dark:text-primary-300"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon className="h-5 w-5 mb-1" />
