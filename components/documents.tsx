@@ -155,46 +155,46 @@ export default function DocumentsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Documents Center</h1>
-          <p className="text-lg text-gray-600">Manage your application documents and track requirements</p>
+          <h1 className="text-4xl font-bold text-foreground">Documents Center</h1>
+          <p className="text-lg text-muted-foreground">Manage your application documents and track requirements</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-blue-500 bg-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Documents</p>
-                  <p className="text-3xl font-bold text-gray-900">{propDocuments.length}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Total Documents</p>
+                  <p className="text-3xl font-bold text-foreground">{propDocuments.length}</p>
                 </div>
                 <FileText className="w-8 h-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="border-l-4 border-l-green-500 bg-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Universities</p>
-                  <p className="text-3xl font-bold text-gray-900">{propUniversities.length}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Universities</p>
+                  <p className="text-3xl font-bold text-foreground">{propUniversities.length}</p>
                 </div>
                 <GraduationCap className="w-8 h-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-l-4 border-l-purple-500">
+          <Card className="border-l-4 border-l-purple-500 bg-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Document Types</p>
-                  <p className="text-3xl font-bold text-gray-900">{new Set(propDocuments.map(d => d.type)).size}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Document Types</p>
+                  <p className="text-3xl font-bold text-foreground">{new Set(propDocuments.map(d => d.type)).size}</p>
                 </div>
                 <UploadIcon className="w-8 h-8 text-purple-500" />
               </div>
@@ -202,7 +202,7 @@ export default function DocumentsPage({
           </Card>
         </div>
 
-        <div className="border-t border-slate-200/60" />
+        <div className="border-t border-border" />
 
         {/* Upload Section */}
         <div className="space-y-6">
@@ -216,11 +216,11 @@ export default function DocumentsPage({
         <CourseEvaluationDB />
 
         {/* Uploaded Documents Section */}
-        <Card className="shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b">
-            <CardTitle className="flex items-center justify-between text-xl">
+        <Card className="shadow-sm bg-card">
+          <CardHeader className="border-b bg-card">
+            <CardTitle className="flex items-center justify-between text-xl text-foreground">
               <div className="flex items-center">
-                <FileText className="w-6 h-6 mr-3 text-slate-600" />
+                <FileText className="w-6 h-6 mr-3 text-muted-foreground" />
                 Uploaded Documents
                 {propDocuments.length > 0 && (
                   <Badge variant="secondary" className="ml-3">
@@ -234,24 +234,24 @@ export default function DocumentsPage({
             {propDocuments.length === 0 ? (
               <div className="text-center py-12">
                 <div className="bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-10 h-10 text-gray-400" />
+                  <FileText className="w-10 h-10 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No documents uploaded yet</h3>
-                <p className="text-gray-600 mb-4">Upload your first document to get started</p>
+                <h3 className="text-lg font-medium text-foreground mb-2">No documents uploaded yet</h3>
+                <p className="text-muted-foreground mb-4">Upload your first document to get started</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {propDocuments.map((doc) => {
                   const typeInfo = getDocumentTypeInfo(doc.type)
                   return (
-                    <Card key={doc.id} className="border border-gray-200 hover:shadow-md transition-all duration-200">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
+                    <Card key={doc.id} className="border border-gray-200 hover:shadow-md transition-all duration-200 dark:bg-card dark:border-gray-700">
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-3 mb-3">
                               <div className="text-2xl">{typeInfo.icon}</div>
                               <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                <h3 className="text-lg font-semibold text-foreground truncate">
                                   {doc.name}
                                 </h3>
                                 <Badge className={`${typeInfo.color} border text-xs font-medium`}>
@@ -261,14 +261,14 @@ export default function DocumentsPage({
                             </div>
                             
                             {doc.note && (
-                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-200">
-                                <p className="text-sm text-blue-800">
+                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-200 dark:bg-gray-800 dark:border-blue-300/30">
+                                <p className="text-sm text-foreground">
                                   <span className="font-medium">Note:</span> {doc.note}
                                 </p>
                               </div>
                             )}
                             
-                            <div className="flex items-center space-x-6 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
                               <span className="flex items-center">
                                 <Calendar className="w-4 h-4 mr-1" />
                                 {formatDate(doc.created_at)}
@@ -280,12 +280,12 @@ export default function DocumentsPage({
                             </div>
                           </div>
                           
-                          <div className="ml-6 flex flex-col space-y-2">
+                          <div className="sm:ml-6 mt-2 sm:mt-0 flex flex-wrap gap-2 sm:flex-col sm:gap-0 sm:space-y-2 w-full sm:w-auto">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => window.open(doc.file_url, '_blank')}
-                              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50 w-full sm:w-auto dark:hover:bg-blue-900/20"
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View
@@ -294,8 +294,9 @@ export default function DocumentsPage({
                               variant="outline"
                               size="sm"
                               asChild
+                              className="w-full sm:w-auto"
                             >
-                              <a href={doc.file_url} download target="_blank" rel="noreferrer">
+                              <a href={doc.file_url} download target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center">
                                 <Download className="w-4 h-4 mr-2" />
                                 Download
                               </a>
@@ -304,6 +305,7 @@ export default function DocumentsPage({
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDelete(doc.id, doc.file_url)}
+                              className="w-full sm:w-auto"
                             >
                               <Trash className="w-4 h-4 mr-2" />
                               Delete

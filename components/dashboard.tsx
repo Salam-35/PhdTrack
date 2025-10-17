@@ -182,7 +182,7 @@ export default function Dashboard({
   }
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-b from-gray-50 to-white min-h-screen">
+    <div className="p-4 space-y-6 bg-background min-h-screen">
       {/* Welcome Section */}
       {searchQuery && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -269,9 +269,9 @@ export default function Dashboard({
         ]
 
         const renderGridBox = (title: string, items: typeof primaryStats) => (
-          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur">
+          <Card className="border shadow-sm bg-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-gray-800">{title}</CardTitle>
+              <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {items.map((item, index) => {
@@ -279,11 +279,11 @@ export default function Dashboard({
                 return (
                   <div
                     key={index}
-                    className={`${item.bgLight} rounded-xl border border-white/40 shadow-sm p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-md`}
+                    className={`${item.bgLight} rounded-xl border border-white/40 shadow-sm p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:bg-gray-800 dark:border-gray-700`}
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-gray-500">{item.label}</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
                         <p className={`mt-2 text-2xl font-bold ${item.textColor}`}>{item.value}</p>
                       </div>
                       <div className={`hidden sm:block bg-gradient-to-br ${item.gradient} text-white rounded-lg p-2.5`}>
@@ -308,7 +308,7 @@ export default function Dashboard({
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Accepted Universities Box */}
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg">
+        <Card className="border border-green-200 shadow-lg bg-card dark:border-gray-700">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -316,8 +316,8 @@ export default function Dashboard({
                   <GraduationCap className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Accepted Universities</h3>
-                  <p className="text-xs text-gray-600">Your successful applications</p>
+                  <h3 className="text-lg font-bold text-foreground">Accepted Universities</h3>
+                  <p className="text-xs text-muted-foreground">Your successful applications</p>
                 </div>
               </div>
               {acceptedUniversities.length > 0 && (
@@ -333,9 +333,9 @@ export default function Dashboard({
                 <div className="bg-green-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                   <GraduationCap className="h-10 w-10 text-green-600" />
                 </div>
-                <h4 className="text-lg font-semibold text-gray-700 mb-2">No Acceptances Yet</h4>
-                <p className="text-sm text-gray-500">Keep working on your applications!</p>
-                <p className="text-xs text-gray-400 mt-1">Your hard work will pay off 🚀</p>
+                <h4 className="text-lg font-semibold text-foreground mb-2">No Acceptances Yet</h4>
+                <p className="text-sm text-muted-foreground">Keep working on your applications!</p>
+                <p className="text-xs text-muted-foreground mt-1">Your hard work will pay off 🚀</p>
               </div>
             ) : (
               acceptedUniversities.map((uni, i) => {
@@ -367,21 +367,21 @@ export default function Dashboard({
                 <div
                   key={i}
                   onClick={() => onEditUniversity?.(uni)}
-                  className="p-5 bg-white border border-green-300 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.03] group"
+                  className="p-5 bg-white border border-green-300 rounded-xl cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.03] group dark:bg-gray-800 dark:border-gray-700"
                 >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 truncate text-lg group-hover:text-green-700 transition-colors">
+                        <h4 className="font-bold text-foreground truncate text-lg group-hover:text-green-700 transition-colors">
                           {uni.name}
                         </h4>
-                        <p className="text-sm text-gray-600 truncate mt-1 font-medium">{uni.program}</p>
+                        <p className="text-sm text-muted-foreground truncate mt-1 font-medium">{uni.program}</p>
                       </div>
                       <Badge className={`${getFundingBadge(uni.acceptance_funding_status)} text-xs font-bold px-3 py-1`}>
                         {getFundingLabel(uni.acceptance_funding_status)}
                       </Badge>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <div className="space-y-1">
                         {upcomingDeadline ? (
                           <div className="flex items-center">
@@ -392,13 +392,13 @@ export default function Dashboard({
                             </span>
                           </div>
                         ) : (
-                          <div className="flex items-center text-gray-400">
+                          <div className="flex items-center text-muted-foreground">
                             <Calendar className="h-3 w-3 mr-1" />
                             <span>No upcoming deadline</span>
                           </div>
                         )}
                         {nextDeadline && (
-                          <div className="pl-4 text-gray-400">
+                          <div className="pl-4 text-muted-foreground">
                             Following: {nextDeadline.term} • {formatDeadlineDate(nextDeadline.deadline)}
                           </div>
                         )}
@@ -409,8 +409,8 @@ export default function Dashboard({
                     </div>
 
                     {uni.notes && (
-                      <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-200">
-                        <p className="text-xs text-gray-700 italic">
+                      <div className="mt-3 p-2 bg-green-50 rounded-lg border border-green-200 dark:bg-gray-800 dark:border-gray-700">
+                        <p className="text-xs text-foreground italic">
                           "{uni.notes.length > 100 ? uni.notes.substring(0, 100) + '...' : uni.notes}"
                         </p>
                       </div>
@@ -423,7 +423,7 @@ export default function Dashboard({
         </Card>
 
         {/* Professor Contacts Box */}
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
+        <Card className="border border-blue-200 shadow-lg bg-card dark:border-gray-700">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -431,8 +431,8 @@ export default function Dashboard({
                   <Users className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">Professor Contacts</h3>
-                  <p className="text-xs text-gray-600">Active communications</p>
+                  <h3 className="text-lg font-bold text-foreground">Professor Contacts</h3>
+                  <p className="text-xs text-muted-foreground">Active communications</p>
                 </div>
               </div>
               {contactedProfessors.length > 0 && (
@@ -448,9 +448,9 @@ export default function Dashboard({
                 <div className="bg-blue-100 rounded-full p-4 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                   <Users className="h-10 w-10 text-blue-600" />
                 </div>
-                <h4 className="text-lg font-semibold text-gray-700 mb-2">No Active Contacts</h4>
-                <p className="text-sm text-gray-500">Start reaching out to professors!</p>
-                <p className="text-xs text-gray-400 mt-1">Building connections is key 🤝</p>
+                <h4 className="text-lg font-semibold text-foreground mb-2">No Active Contacts</h4>
+                <p className="text-sm text-muted-foreground">Start reaching out to professors!</p>
+                <p className="text-xs text-muted-foreground mt-1">Building connections is key 🤝</p>
               </div>
             ) : (
               contactedProfessors.map((prof, i) => {
@@ -467,14 +467,14 @@ export default function Dashboard({
                 }
 
                 return (
-                  <div key={i} className="p-4 bg-white border border-blue-300 rounded-xl hover:shadow-lg transition-all duration-300 group">
+                  <div key={i} className="p-4 bg-white border border-blue-300 rounded-xl hover:shadow-lg transition-all duration-300 group dark:bg-gray-800 dark:border-gray-700">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors">
+                        <h4 className="font-bold text-foreground truncate group-hover:text-blue-700 transition-colors">
                           {prof.name}
                         </h4>
-                        <p className="text-sm text-gray-600 truncate font-medium">{prof.university}</p>
-                        <p className="text-xs text-gray-500 mt-1">{prof.department}</p>
+                        <p className="text-sm text-muted-foreground truncate font-medium">{prof.university}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{prof.department}</p>
                       </div>
                       <Badge className={`${getContactBadge(prof.contact_status)} text-xs font-bold px-3 py-1`}>
                         {getContactLabel(prof.contact_status)}
@@ -482,7 +482,7 @@ export default function Dashboard({
                     </div>
 
                     {prof.last_contact && (
-                      <div className="text-xs text-gray-500 mt-2 flex items-center">
+                      <div className="text-xs text-muted-foreground mt-2 flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
                         Last contact: {new Date(prof.last_contact).toLocaleDateString()}
                       </div>
@@ -496,7 +496,7 @@ export default function Dashboard({
       </div>
 
       {/* Upcoming Tasks */}
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Clock className="h-5 w-5 text-primary-500" />
@@ -506,14 +506,14 @@ export default function Dashboard({
         <CardContent className="space-y-3">
           {upcomingTasks.length === 0 ? (
             <div className="text-center py-4">
-              <p className="text-gray-500">No upcoming tasks</p>
+              <p className="text-muted-foreground">No upcoming tasks</p>
             </div>
           ) : (
             upcomingTasks.map((task, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-gray-800 dark:border dark:border-gray-700">
                 <div>
                   <p className="font-medium text-sm">{task.title}</p>
-                  <p className="text-xs text-gray-500 flex items-center mt-1">
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Calendar className="h-3 w-3 mr-1" />
                     {task.date}
                   </p>
@@ -528,7 +528,7 @@ export default function Dashboard({
       </Card>
 
       {/* Recent Activity */}
-      <Card>
+      <Card className="bg-card">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Bell className="h-5 w-5 text-primary-500" />
@@ -538,13 +538,13 @@ export default function Dashboard({
         <CardContent className="space-y-3">
           {recentActivity.length === 0 ? (
             <div className="text-center py-4">
-              <p className="text-gray-500">No recent activity</p>
+              <p className="text-muted-foreground">No recent activity</p>
             </div>
           ) : (
             recentActivity.map((event, i) => (
-              <div key={i} className="flex flex-col space-y-1 p-3 bg-gray-50 rounded-lg">
+              <div key={i} className="flex flex-col space-y-1 p-3 bg-gray-50 rounded-lg dark:bg-gray-800 dark:border dark:border-gray-700">
                 <p className="text-sm font-medium">{event.title}</p>
-                <p className="text-xs text-gray-500">{event.date}</p>
+                <p className="text-xs text-muted-foreground">{event.date}</p>
               </div>
             ))
           )}

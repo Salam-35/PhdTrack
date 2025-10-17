@@ -226,8 +226,8 @@ export default function Applications({ universities, setUniversities }: Applicat
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-l font-bold">Applications</h2>
-          <p className="text-gray-800 ">Track your PhD program applications</p>
+          <h2 className="text-l font-bold text-foreground">Applications</h2>
+          <p className="text-muted-foreground">Track your PhD program applications</p>
         </div>
         <Button onClick={() => setShowForm(true)} className="bg-primary-500 hover:bg-primary-600">
           <Plus className="h-4 w-4 mr-2" />
@@ -333,12 +333,12 @@ export default function Applications({ universities, setUniversities }: Applicat
               key={university.id}
               className={`relative overflow-hidden border hover:shadow-md transition-shadow ${
                 university.status === "accepted"
-                  ? "border-green-200 bg-green-50/30"
+                  ? "border-green-200 bg-green-50/30 dark:bg-gray-800 dark:border-gray-700"
                   : university.status === "rejected"
-                  ? "border-red-200 bg-red-50/30"
+                  ? "border-red-200 bg-red-50/30 dark:bg-gray-800 dark:border-gray-700"
                   : university.status === "submitted" || university.status === "under-review"
-                  ? "border-yellow-200 bg-yellow-50/30"
-                  : "border-gray-200 bg-white"
+                  ? "border-yellow-200 bg-yellow-50/30 dark:bg-gray-800 dark:border-gray-700"
+                  : "border-gray-200 bg-card dark:border-gray-700 dark:bg-gray-800"
               }`}
             >
               {/* Header */}
@@ -347,11 +347,11 @@ export default function Applications({ universities, setUniversities }: Applicat
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Building className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                      <CardTitle className="text-base font-semibold text-gray-900 truncate">
+                      <CardTitle className="text-base font-semibold text-foreground truncate">
                         {university.name}
                       </CardTitle>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                       <BookOpen className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="truncate">{university.program}</span>
                     </div>
@@ -411,7 +411,7 @@ export default function Applications({ universities, setUniversities }: Applicat
                         ? "text-red-600"
                         : daysUntil !== null && daysUntil < 20
                         ? "text-orange-600"
-                        : "text-blue-800"
+                        : "text-blue-800 dark:text-blue-400"
                     }`}>
                       {isPast
                         ? "All deadlines passed"
@@ -439,7 +439,7 @@ export default function Applications({ universities, setUniversities }: Applicat
                     </span>
                     <span className="font-medium">{getProgress(university.status)}%</span>
                   </div>
-                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all duration-500 ${
                         university.status === "accepted"
@@ -457,7 +457,7 @@ export default function Applications({ universities, setUniversities }: Applicat
 
                 {/* Funding Information */}
                 {university.acceptance_funding_status === "with-funding" && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-1.5">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-1.5 dark:bg-gray-800 dark:border-gray-700">
                     <div className="flex items-center gap-2 text-green-700">
                       <DollarSign className="h-4 w-4" />
                       <span className="text-xs font-semibold">Funding Awarded</span>
@@ -481,20 +481,20 @@ export default function Applications({ universities, setUniversities }: Applicat
 
                 {/* Info Grid */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border dark:bg-gray-800 dark:border-gray-700">
                     <DollarSign className="h-4 w-4 text-green-600 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[12px] text-gray-500">App Fee</p>
-                      <p className="font-semibold text-xs text-gray-900 truncate">
+                      <p className="font-semibold text-xs text-foreground truncate">
                         ${university.application_fee}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border dark:bg-gray-800 dark:border-gray-700">
                     <Calendar className="h-4 w-4 text-blue-600 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[12px] text-gray-500">Deadline</p>
-                      <p className="font-semibold text-gray-900 truncate">
+                      <p className="font-semibold text-foreground truncate">
                         {upcomingDeadline
                           ? formatDeadlineDate(upcomingDeadline.deadline)
                           : deadlineDetails.deadlines.length > 0
@@ -503,20 +503,20 @@ export default function Applications({ universities, setUniversities }: Applicat
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border dark:bg-gray-800 dark:border-gray-700">
                     <FileText className="h-4 w-4 text-purple-600 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[12px] text-gray-500">SOP</p>
-                      <p className="font-semibold text-gray-900 truncate">
+                      <p className="font-semibold text-foreground truncate">
                         {university.sop_length} pages
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border dark:bg-gray-800 dark:border-gray-700">
                     <Users className="h-4 w-4 text-orange-600 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[12px] text-gray-500">GRE</p>
-                      <p className="font-semibold text-gray-900 text-[11px] truncate">
+                      <p className="font-semibold text-foreground text-[11px] truncate">
                         {university.gre_required ? "Required" : "Optional"}
                       </p>
                     </div>

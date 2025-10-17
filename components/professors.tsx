@@ -506,8 +506,8 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Professor Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage your potential supervisors</p>
+          <h1 className="text-xl font-bold text-foreground">Professor Management</h1>
+          <p className="text-muted-foreground mt-1">Track and manage your potential supervisors</p>
         </div>
         <Button
           onClick={openNewProfessorForm}
@@ -653,7 +653,7 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
               <Card
   key={professor.id}
   className={`relative overflow-hidden rounded-xl shadow-sm border transition-all duration-200 hover:shadow-md ${
-    followUpStatus.needsFollowUp ? "border-red-300 bg-red-50/50" : "border-gray-200 bg-white"
+    followUpStatus.needsFollowUp ? "border-red-300 bg-red-50/50" : "border-gray-200 bg-card dark:border-gray-700 dark:bg-gray-800"
   }`}
 >
   {/* Edit button moved to bottom actions */}
@@ -661,9 +661,9 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
   {/* Inner Grid (Main Content) */}
   <div className="grid grid-cols-1 md:grid-cols-5 gap-3 p-4">
     {/* Professor Info (wider) */}
-    <div className="md:col-span-3 bg-purple-50 border border-purple-100 rounded-lg p-3">
-      <h4 className="text-sm font-semibold text-purple-800 mb-1">Professor Info</h4>
-      <ul className="text-sm text-gray-700 space-y-1">
+    <div className="md:col-span-3 bg-purple-50 border border-purple-100 rounded-lg p-3 dark:bg-gray-800 dark:border-gray-700">
+      <h4 className="text-sm font-semibold text-purple-800 mb-1 dark:text-foreground">Professor Info</h4>
+      <ul className="text-sm text-gray-700 space-y-1 dark:text-foreground">
         <li>
           <span className="font-medium">Name:</span> {professor.name}
         </li>
@@ -679,7 +679,7 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
           <span className="font-medium">Email:</span>{" "}
           <a
             href={`mailto:${professor.email}`}
-            className="text-blue-700 hover:underline break-all"
+            className="text-blue-700 dark:text-blue-400 hover:underline break-all"
           >
             {professor.email}
           </a>
@@ -688,16 +688,16 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
     </div>
 
     {/* Contact & Time Info */}
-    <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-3">
-      <h4 className="text-sm font-semibold text-blue-800 mb-1">Contact & Time</h4>
-      <div className="space-y-1 text-sm text-gray-700">
+    <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-3 dark:bg-gray-800 dark:border-gray-700">
+      <h4 className="text-sm font-semibold text-blue-800 mb-1 dark:text-foreground">Contact & Time</h4>
+      <div className="space-y-1 text-sm text-gray-700 dark:text-foreground">
         {/* Follow-up checkbox */}
         <label className="flex items-center gap-2 mb-1">
           <Checkbox
             checked={Boolean((professor as any).ifFowllowedUp)}
             onCheckedChange={(checked) => toggleFollowedUp(professor, Boolean(checked))}
           />
-          <span className="text-xs text-gray-700">Followed up</span>
+          <span className="text-xs text-gray-700 dark:text-foreground">Followed up</span>
         </label>
         {professor.mailing_date && (
           <div className="flex justify-between">
@@ -734,7 +734,7 @@ export default function ProfessorsPage({ professors: propProfessors, setProfesso
 
   {/* Notes Section */}
   {professor.notes && (
-    <div className="bg-gray-50 border-t border-gray-100 px-4 py-3">
+    <div className="bg-gray-50 border-t border-gray-100 px-4 py-3 dark:bg-gray-800 dark:border-gray-700">
       <p className="text-sm font-medium text-gray-800 mb-1">Notes:</p>
       <p className="text-sm text-gray-600 line-clamp-3">{professor.notes}</p>
     </div>

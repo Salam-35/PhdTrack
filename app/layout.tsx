@@ -5,6 +5,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { UserProvider } from "@/components/UserProvider"
 import AuthGuard from "@/components/AuthGuard"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -33,12 +34,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title" content="PhD Tracker Pro" />
       </head>
       <body className={inter.className} suppressHydrationWarning={true}>
-        <UserProvider>
-          <AuthGuard>
-            {children}
-            <Toaster />
-          </AuthGuard>
-        </UserProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <UserProvider>
+            <AuthGuard>
+              {children}
+              <Toaster />
+            </AuthGuard>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
