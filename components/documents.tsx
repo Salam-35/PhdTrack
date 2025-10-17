@@ -245,8 +245,8 @@ export default function DocumentsPage({
                   const typeInfo = getDocumentTypeInfo(doc.type)
                   return (
                     <Card key={doc.id} className="border border-gray-200 hover:shadow-md transition-all duration-200">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-3 mb-3">
                               <div className="text-2xl">{typeInfo.icon}</div>
@@ -268,7 +268,7 @@ export default function DocumentsPage({
                               </div>
                             )}
                             
-                            <div className="flex items-center space-x-6 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-gray-500">
                               <span className="flex items-center">
                                 <Calendar className="w-4 h-4 mr-1" />
                                 {formatDate(doc.created_at)}
@@ -280,12 +280,12 @@ export default function DocumentsPage({
                             </div>
                           </div>
                           
-                          <div className="ml-6 flex flex-col space-y-2">
+                          <div className="sm:ml-6 mt-2 sm:mt-0 flex flex-wrap gap-2 sm:flex-col sm:gap-0 sm:space-y-2 w-full sm:w-auto">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => window.open(doc.file_url, '_blank')}
-                              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50 w-full sm:w-auto"
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View
@@ -294,8 +294,9 @@ export default function DocumentsPage({
                               variant="outline"
                               size="sm"
                               asChild
+                              className="w-full sm:w-auto"
                             >
-                              <a href={doc.file_url} download target="_blank" rel="noreferrer">
+                              <a href={doc.file_url} download target="_blank" rel="noreferrer" className="w-full inline-flex items-center justify-center">
                                 <Download className="w-4 h-4 mr-2" />
                                 Download
                               </a>
@@ -304,6 +305,7 @@ export default function DocumentsPage({
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDelete(doc.id, doc.file_url)}
+                              className="w-full sm:w-auto"
                             >
                               <Trash className="w-4 h-4 mr-2" />
                               Delete
