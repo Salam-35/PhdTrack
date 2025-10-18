@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { UserProvider } from "@/components/UserProvider"
 import AuthGuard from "@/components/AuthGuard"
 import { ThemeProvider } from "@/components/theme-provider"
+import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
@@ -33,8 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="PhD Tracker Pro" />
       </head>
-      <body className={inter.className} suppressHydrationWarning={true}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <body className={cn("min-h-screen bg-background text-foreground", inter.className)} suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <UserProvider>
             <AuthGuard>
               {children}

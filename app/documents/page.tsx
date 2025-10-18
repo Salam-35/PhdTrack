@@ -6,7 +6,7 @@ import { useUser } from "@/components/UserProvider"
 import DocumentUploadForm from "@/components/forms/document-upload-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Trash } from "lucide-react"
+import { Download, Trash, Loader2 } from "lucide-react"
 
 export default function DocumentsPage() {
   const user = useUser()
@@ -60,8 +60,13 @@ export default function DocumentsPage() {
       <DocumentUploadForm onUpload={fetchDocuments} />
 
       {loading ? (
-        <p>Loading documents...</p>
-      ) : (
+        <Card>
+          <CardContent className="flex items-center justify-center gap-3 py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Loading documents...</span>
+          </CardContent>
+        </Card>
+      ) : documents.length > 0 ? (
         <div className="grid md:grid-cols-2 gap-4">
           {documents.map((doc) => (
             <Card key={doc.id}>
@@ -90,14 +95,20 @@ export default function DocumentsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500">{doc.name}</p>
+                <p className="text-sm text-muted-foreground">{doc.name}</p>
                 {doc.note && (
-                  <p className="text-sm text-gray-700 mt-1 italic">{doc.note}</p>
+                  <p className="text-sm text-foreground mt-1 italic">{doc.note}</p>
                 )}
               </CardContent>
             </Card>
           ))}
         </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm text-muted-foreground">No documents uploaded yet. Use the form above to add your first document.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

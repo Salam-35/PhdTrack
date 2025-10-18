@@ -231,14 +231,14 @@ export default function CourseEvaluationDB() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b">
-        <CardTitle className="flex items-center justify-between text-xl">
+    <Card className="border border-border bg-card text-foreground shadow-sm">
+      <CardHeader className="border-b border-border bg-card">
+        <CardTitle className="flex items-center justify-between text-xl text-foreground">
           <div className="flex items-center gap-3">
             <span>Saved Course Evaluations</span>
-            {selectedId && <Badge variant="secondary">{courses.length} courses</Badge>}
+            {selectedId && <Badge variant="secondary" className="bg-muted text-foreground">{courses.length} courses</Badge>}
           </div>
-          {loading && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
@@ -254,14 +254,14 @@ export default function CourseEvaluationDB() {
                   else setSelectedId(v)
                 }}
               >
-                <SelectTrigger className="w-full max-w-md">
+                <SelectTrigger className="w-full max-w-md bg-background text-foreground">
                   <SelectValue placeholder={evaluations.length ? 'Select an evaluation' : 'No evaluations'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Select none</SelectItem>
                   {evaluations.map(ev => (
                     <SelectItem key={ev.id} value={ev.id}>
-                      {ev.name} <span className="text-xs text-gray-600">[{ev.level}]</span>
+                      {ev.name} <span className="text-xs text-muted-foreground">[{ev.level}]</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -271,24 +271,24 @@ export default function CourseEvaluationDB() {
                 size="sm"
                 disabled={!selectedId}
                 onClick={() => { if (selectedId) deleteEvaluation(selectedId) }}
-                className="text-red-600 hover:bg-red-50"
+                className="text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
                 title="Delete selected evaluation"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
             {evaluations.length === 0 && (
-              <div className="text-sm text-gray-600 mt-2">No evaluations yet</div>
+              <div className="text-sm text-muted-foreground mt-2">No evaluations yet</div>
             )}
           </div>
         </div>
 
         {!selectedId && (
-          <div className="border-t pt-6 text-sm text-gray-600">Select an evaluation to view its courses.</div>
+          <div className="border-t border-border pt-6 text-sm text-muted-foreground">Select an evaluation to view its courses.</div>
         )}
 
         {selectedId && (
-          <div className="space-y-6 border-t pt-6">
+          <div className="space-y-6 border-t border-border pt-6">
             {/* Meta */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -317,11 +317,11 @@ export default function CourseEvaluationDB() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Grade to GPA Mapping</Label>
-                <span className="text-xs text-gray-600">Local only</span>
+                <span className="text-xs text-muted-foreground">Local only</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {Object.entries(gradeMap).map(([g, p]) => (
-                  <div key={g} className="flex items-center gap-2 border rounded px-2 py-1">
+                  <div key={g} className="flex items-center gap-2 border border-border rounded px-2 py-1 bg-card">
                     <Input value={g} readOnly className="h-8 w-16" />
                     <Input type="number" step="0.01" value={p} onChange={(e) => setGradeMap(prev => ({ ...prev, [g]: parseFloat(e.target.value) || 0 }))} className="h-8 w-20" />
                   </div>
@@ -333,25 +333,29 @@ export default function CourseEvaluationDB() {
             <div className="flex items-center justify-between">
               <Label>Courses</Label>
               <div className="flex items-center gap-2">
-                {message && <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">{message}</div>}
+                {message && (
+                  <div className="text-sm text-foreground border border-border/60 bg-muted/60 px-3 py-2 rounded-md">
+                    {message}
+                  </div>
+                )}
                 <Button onClick={addCourse}><Plus className="h-4 w-4 mr-1" /> Add Row</Button>
               </div>
             </div>
-            <div className="overflow-x-auto border rounded">
+            <div className="overflow-x-auto border border-border rounded">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left px-3 py-2">Include</th>
-                    <th className="text-left px-3 py-2">Code</th>
-                    <th className="text-left px-3 py-2">Course Name</th>
-                    <th className="text-left px-3 py-2">Grade</th>
-                    <th className="text-left px-3 py-2">Credit Hours</th>
-                    <th className="text-left px-3 py-2">Actions</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Include</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Code</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Course Name</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Grade</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Credit Hours</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedCourses.map((c) => (
-                    <tr key={c.id} className="border-t">
+                    <tr key={c.id} className="border-t border-border">
                       <td className="px-3 py-2">
                         <input type="checkbox" checked={includeMap[c.id] !== false} onChange={(e) => setIncludeMap(prev => ({ ...prev, [c.id]: e.target.checked }))} />
                       </td>
@@ -369,7 +373,12 @@ export default function CourseEvaluationDB() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => removeCourse(c.id)} className="text-red-600 hover:bg-red-50 h-8 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCourse(c.id)}
+                            className="h-8 px-2 text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -381,9 +390,9 @@ export default function CourseEvaluationDB() {
             </div>
 
             {/* Summary */}
-            <div className="flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-gray-600">Total Credits: <span className="font-medium text-gray-900">{totalCredits}</span></div>
-              <div className="text-lg">CGPA: <span className="font-semibold">{cgpa.toFixed(3)}</span></div>
+            <div className="flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
+              <div>Total Credits: <span className="font-medium text-foreground">{totalCredits}</span></div>
+              <div className="text-lg text-foreground">CGPA: <span className="font-semibold">{cgpa.toFixed(3)}</span></div>
             </div>
           </div>
         )}

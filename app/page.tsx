@@ -222,7 +222,13 @@ export default function PhDTrackerPro() {
   }
 
   const handleAddProfessor = (professor: Professor) => {
-    setProfessors((prev) => [professor, ...prev])
+    setProfessors((prev) => {
+      const exists = prev.some((item) => item.id === professor.id)
+      if (exists) {
+        return prev.map((item) => (item.id === professor.id ? professor : item))
+      }
+      return [professor, ...prev]
+    })
   }
 
   const handleAddDocument = (document: Document) => {
@@ -352,12 +358,9 @@ export default function PhDTrackerPro() {
         <div className="px-3 sm:px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className=" items-center justify-center">
-                  <img
-                    src="/logo.png"
-                    alt="Logo"
-                    className="h-10 w-25 object-contain"
-                  />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20 dark:bg-primary/20">
+                <GraduationCap className="h-6 w-6" aria-hidden="true" />
+                <span className="sr-only">PhDTrack logo</span>
               </div>
               <div>
                 <h1 className="text-base sm:text-lg font-bold text-foreground">Application Tracker</h1>
@@ -368,7 +371,7 @@ export default function PhDTrackerPro() {
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
 
               <div className="relative hidden sm:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                 <Input
                   placeholder="Search applications, professors, documents..."
                   value={searchQuery}
@@ -392,7 +395,7 @@ export default function PhDTrackerPro() {
               {/* Theme Toggle */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary-50">
+                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-accent">
                     {resolvedTheme === 'dark' ? (
                       <Moon className="h-5 w-5" />
                     ) : resolvedTheme === 'light' ? (
@@ -591,7 +594,7 @@ export default function PhDTrackerPro() {
         open={showProfessorForm}
         setOpen={setShowProfessorForm}
         editingProfessor={undefined}
-        refresh={loadData}
+        onSaved={handleAddProfessor}
       />
 
       {showDocumentForm && (

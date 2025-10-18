@@ -412,22 +412,22 @@ Return ONLY valid JSON in this exact format:
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-background text-foreground">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-purple-600" />
+            <Wand2 className="h-5 w-5 text-purple-500 dark:text-purple-300" />
             AI Email Generator
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-muted-foreground">
             Generate personalized academic emails for PhD applications using AI.
           </DialogDescription>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-muted-foreground">
               Professor: {professor.name} • {professor.email}
             </span>
             {hasOpenAI && (
-              <Badge variant="outline" className="text-green-600 border-green-200">
-                <Sparkles className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="border-emerald-400/50 text-emerald-600 dark:text-emerald-300">
+                <Sparkles className="mr-1 h-3 w-3 text-emerald-500 dark:text-emerald-300" />
                 OpenAI Available
               </Badge>
             )}
@@ -439,22 +439,22 @@ Return ONLY valid JSON in this exact format:
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Generate Email</CardTitle>
+                <CardTitle className="text-lg text-foreground">Generate Email</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
+                <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
+                  <p className="text-sm text-primary dark:text-primary-100">
                     AI will find professor information using their name and email, then generate a personalized email.
                   </p>
                 </div>
 
                 {!hasOpenAI && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-yellow-800">
+                  <div className="rounded-lg border border-amber-300/60 bg-amber-100/80 p-3 dark:border-amber-500/40 dark:bg-amber-950/40">
+                    <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
                       <AlertCircle className="h-4 w-4" />
                       <span className="text-sm font-medium">OpenAI Not Configured</span>
                     </div>
-                    <p className="text-xs text-yellow-700 mt-1">
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
                       Add NEXT_PUBLIC_OPENAI_API_KEY to enable AI
                     </p>
                   </div>
@@ -462,21 +462,23 @@ Return ONLY valid JSON in this exact format:
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Manual Research Info (Optional)</Label>
+                    <Label className="text-sm font-medium text-foreground">Manual Research Info (Optional)</Label>
                     <Textarea
                       placeholder="If you know specific details about the professor's research, lab, recent papers, or projects, add them here to improve email personalization..."
                       value={manualResearchInfo}
                       onChange={(e) => setManualResearchInfo(e.target.value)}
                       rows={3}
+                      className="bg-background text-foreground"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Additional Instructions (Optional)</Label>
+                    <Label className="text-sm font-medium text-foreground">Additional Instructions (Optional)</Label>
                     <Textarea
                       placeholder="e.g., Mention specific deadline, emphasize keypoint detection experience, reference particular paper..."
                       value={customInstructions}
                       onChange={(e) => setCustomInstructions(e.target.value)}
                       rows={3}
+                      className="bg-background text-foreground"
                     />
                   </div>
                 </div>
@@ -499,19 +501,19 @@ Return ONLY valid JSON in this exact format:
             {(professorInsights || infoMessage) && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Google Search Insights</CardTitle>
+                  <CardTitle className="text-lg text-foreground">Google Search Insights</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {infoMessage && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-md p-3 text-xs text-slate-700">
+                    <div className="rounded-md border border-border bg-muted p-3 text-xs text-muted-foreground">
                       {infoMessage}
                     </div>
                   )}
                   {professorInsights ? (
-                    <div className="space-y-3 text-sm text-gray-700">
+                    <div className="space-y-3 text-sm text-muted-foreground">
                       <div>
-                        <span className="font-medium text-gray-900">Summary</span>
-                        <p className="mt-1 text-gray-600">
+                        <span className="font-medium text-foreground">Summary</span>
+                        <p className="mt-1">
                           {professorInsights.summary || 'No verified summary found. See links for more context.'}
                         </p>
                       </div>
@@ -520,14 +522,14 @@ Return ONLY valid JSON in this exact format:
                         <div className="grid grid-cols-1 gap-2">
                           {professorInsights.labName && (
                             <div>
-                              <span className="font-medium text-gray-900">Lab</span>
-                              <p className="mt-1 text-gray-600">
+                              <span className="font-medium text-foreground">Lab</span>
+                              <p className="mt-1">
                                 {professorInsights.labWebsite ? (
                                   <a
                                     href={professorInsights.labWebsite}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
+                                    className="text-primary hover:underline"
                                   >
                                     {professorInsights.labName}
                                   </a>
@@ -539,13 +541,13 @@ Return ONLY valid JSON in this exact format:
                           )}
                           {professorInsights.personalWebsite && (
                             <div>
-                              <span className="font-medium text-gray-900">Personal Website</span>
+                              <span className="font-medium text-foreground">Personal Website</span>
                               <p className="mt-1">
                                 <a
                                   href={professorInsights.personalWebsite}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
+                                  className="text-primary hover:underline"
                                 >
                                   {professorInsights.personalWebsite}
                                 </a>
@@ -557,7 +559,7 @@ Return ONLY valid JSON in this exact format:
 
                       {professorInsights.relatedLinks.length > 0 && (
                         <div>
-                          <span className="font-medium text-gray-900">Notable Links</span>
+                          <span className="font-medium text-foreground">Notable Links</span>
                           <ul className="mt-2 space-y-2">
                             {professorInsights.relatedLinks.map((link) => (
                               <li key={link.url} className="text-sm">
@@ -565,12 +567,12 @@ Return ONLY valid JSON in this exact format:
                                   href={link.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline"
+                                  className="text-primary hover:underline"
                                 >
                                   {link.title}
                                 </a>
                                 {link.snippet && (
-                                  <p className="text-xs text-gray-500 mt-1">{link.snippet}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">{link.snippet}</p>
                                 )}
                               </li>
                             ))}
@@ -580,10 +582,10 @@ Return ONLY valid JSON in this exact format:
 
                       {professorInsights.usedQueries.length > 0 && (
                         <div>
-                          <span className="font-medium text-gray-900">Search Queries</span>
-                          <div className="flex flex-wrap gap-2 mt-1">
+                          <span className="font-medium text-foreground">Search Queries</span>
+                          <div className="mt-1 flex flex-wrap gap-2">
                             {professorInsights.usedQueries.map((query) => (
-                              <Badge key={query} variant="outline">
+                              <Badge key={query} variant="outline" className="border-border text-foreground">
                                 {query}
                               </Badge>
                             ))}
@@ -592,7 +594,7 @@ Return ONLY valid JSON in this exact format:
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       No structured information retrieved. Review the professor details manually before sending.
                     </p>
                   )}
@@ -607,8 +609,8 @@ Return ONLY valid JSON in this exact format:
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-emerald-500 dark:text-emerald-300" />
                       Your Personalized Email
                     </CardTitle>
                     <Button
@@ -626,7 +628,7 @@ Return ONLY valid JSON in this exact format:
                   {/* Subject */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Subject</Label>
+                      <Label className="text-sm font-medium text-foreground">Subject</Label>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -636,8 +638,8 @@ Return ONLY valid JSON in this exact format:
                         Copy
                       </Button>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-3 border">
-                      <p className="text-sm font-medium">{generatedEmail.subject}</p>
+                    <div className="rounded-lg border border-border bg-muted p-3">
+                      <p className="text-sm font-medium text-foreground">{generatedEmail.subject}</p>
                     </div>
                   </div>
 
@@ -646,7 +648,7 @@ Return ONLY valid JSON in this exact format:
                   {/* Body */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Email Body</Label>
+                      <Label className="text-sm font-medium text-foreground">Email Body</Label>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -656,8 +658,8 @@ Return ONLY valid JSON in this exact format:
                         Copy
                       </Button>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4 border max-h-96 overflow-y-auto">
-                      <pre className="text-sm whitespace-pre-wrap font-sans">{generatedEmail.body}</pre>
+                    <div className="max-h-96 overflow-y-auto rounded-lg border border-border bg-muted p-4">
+                      <pre className="text-sm whitespace-pre-wrap font-sans text-foreground">{generatedEmail.body}</pre>
                     </div>
                   </div>
 
@@ -682,10 +684,10 @@ Return ONLY valid JSON in this exact format:
               </Card>
             ) : (
               <Card>
-                <CardContent className="text-center py-16">
-                  <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Generate</h3>
-                  <p className="text-gray-500 max-w-sm mx-auto">
+                <CardContent className="py-16 text-center">
+                  <Sparkles className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-medium text-foreground">Ready to Generate</h3>
+                  <p className="mx-auto max-w-sm text-muted-foreground">
                     Click "Generate Email" to create a personalized PhD application email using AI.
                   </p>
                 </CardContent>

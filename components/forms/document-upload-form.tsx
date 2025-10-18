@@ -179,7 +179,7 @@ export default function DocumentUploadForm({ onUpload }: Props) {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8">
+    <div className="w-full max-w-2xl mx-auto px-4 py-8 text-foreground">
       {/* Upload Section */}
       <div className="text-center space-y-4">
         <Button 
@@ -195,10 +195,10 @@ export default function DocumentUploadForm({ onUpload }: Props) {
         {/* Expandable Upload Form */}
         {isDropdownOpen && (
           <div className="w-full max-w-2xl mx-auto">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">Upload a Document</h3>
-                <p className="text-sm text-gray-600">Add your academic documents to your profile</p>
+            <div className="rounded-xl border border-border bg-card p-6 shadow-xl transition-colors animate-in slide-in-from-top-2 duration-300 space-y-6">
+              <div className="text-center space-y-1.5">
+                <h3 className="text-xl font-semibold text-foreground">Upload a Document</h3>
+                <p className="text-sm text-muted-foreground">Add your academic documents to your profile</p>
               </div>
 
               <form onSubmit={(e) => { e.preventDefault(); handleUpload(); }} className="space-y-6">
@@ -256,11 +256,11 @@ export default function DocumentUploadForm({ onUpload }: Props) {
                   <Label htmlFor="note">Optional Note</Label>
                   <Input
                     id="note"
-                    placeholder="e.g. for MIT application, reviewed by advisor"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    disabled={uploading}
-                  />
+                      placeholder="e.g. for MIT application, reviewed by advisor"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      disabled={uploading}
+                    />
                 </div>
 
                 {/* Upload Button */}

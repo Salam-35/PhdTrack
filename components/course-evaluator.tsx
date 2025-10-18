@@ -291,16 +291,16 @@ export default function CourseEvaluator() {
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b">
-        <CardTitle className="flex items-center justify-between text-xl">
+    <Card className="border border-border bg-card text-foreground shadow-sm">
+      <CardHeader className="border-b border-border bg-card">
+        <CardTitle className="flex items-center justify-between text-xl text-foreground">
           <div className="flex items-center gap-3">
             <span>Course-wise Evaluation</span>
             {courses.length > 0 && (
-              <Badge variant="secondary">{courses.length} courses</Badge>
+              <Badge variant="secondary" className="bg-muted text-foreground">{courses.length} courses</Badge>
             )}
           </div>
-          <div className="text-sm text-gray-600">Stored locally</div>
+          <div className="text-sm text-muted-foreground">Stored locally</div>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
@@ -309,20 +309,30 @@ export default function CourseEvaluator() {
           <div className="space-y-3">
             <Label>Upload Transcript (PDF or Text)</Label>
             <Input type="file" accept=".pdf,.txt,.text" onChange={(e) => handleFileChange(e.target.files?.[0] || null)} />
-            <p className="text-xs text-gray-600">If PDF parsing fails, paste transcript text below and run AI extraction.</p>
+            <p className="text-xs text-muted-foreground">If PDF parsing fails, paste transcript text below and run AI extraction.</p>
           </div>
           <div className="space-y-2">
             <Label>Or Paste Transcript Text</Label>
-            <Textarea rows={5} placeholder="Paste transcript text here..." value={transcriptText} onChange={(e) => setTranscriptText(e.target.value)} />
+            <Textarea
+              rows={5}
+              placeholder="Paste transcript text here..."
+              value={transcriptText}
+              onChange={(e) => setTranscriptText(e.target.value)}
+              className="bg-background"
+            />
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button onClick={extractWithOpenAI} disabled={loading} className="bg-purple-600 hover:bg-purple-700">
-            {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <Button onClick={extractWithOpenAI} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
             Extract Courses with AI
           </Button>
-          {message && <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">{message}</div>}
+          {message && (
+            <div className="text-sm text-foreground border border-border/60 bg-muted/60 px-3 py-2 rounded-md">
+              {message}
+            </div>
+          )}
         </div>
 
         {/* Save to Database */}
@@ -333,7 +343,11 @@ export default function CourseEvaluator() {
           </div>
           <div>
             <Label>Level</Label>
-            <select className="border rounded h-10 px-2 w-full" value={saveLevel} onChange={(e) => setSaveLevel(e.target.value)}>
+            <select
+              className="w-full h-10 px-2 rounded border border-border bg-background text-foreground"
+              value={saveLevel}
+              onChange={(e) => setSaveLevel(e.target.value)}
+            >
               <option value="Bachelor">Bachelor</option>
               <option value="Masters">Masters</option>
               <option value="PhD">PhD</option>
@@ -341,8 +355,12 @@ export default function CourseEvaluator() {
             </select>
           </div>
           <div>
-            <Button onClick={saveToDatabase} disabled={saving || !user?.id || !saveName.trim() || courses.length === 0} className="w-full">
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            <Button
+              onClick={saveToDatabase}
+              disabled={saving || !user?.id || !saveName.trim() || courses.length === 0}
+              className="w-full gap-2"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Save to Database
             </Button>
           </div>
@@ -356,7 +374,7 @@ export default function CourseEvaluator() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
             {Object.entries(gradeMap).map(([g, p]) => (
-              <div key={g} className="flex items-center gap-2 border rounded px-2 py-1">
+              <div key={g} className="flex items-center gap-2 border border-border rounded px-2 py-1 bg-card">
                 <Input value={g} readOnly className="h-8 w-16" />
                 <Input type="number" step="0.01" value={p} onChange={(e) => setGradeMap(prev => ({ ...prev, [g]: parseFloat(e.target.value) || 0 }))} className="h-8 w-20" />
               </div>
@@ -368,23 +386,23 @@ export default function CourseEvaluator() {
         <div className="space-y-2">
           <Label>Courses</Label>
           {courses.length === 0 ? (
-            <div className="text-sm text-gray-600">No courses extracted yet.</div>
+            <div className="text-sm text-muted-foreground">No courses extracted yet.</div>
           ) : (
-            <div className="overflow-x-auto border rounded">
+            <div className="overflow-x-auto border border-border rounded">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left px-3 py-2">Include</th>
-                    <th className="text-left px-3 py-2">Code</th>
-                    <th className="text-left px-3 py-2">Course Name</th>
-                    <th className="text-left px-3 py-2">Grade</th>
-                    <th className="text-left px-3 py-2">Credit Hours</th>
-                    <th className="text-left px-3 py-2">Actions</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Include</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Code</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Course Name</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Grade</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Credit Hours</th>
+                    <th className="text-left px-3 py-2 text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedCourses.map((c) => (
-                    <tr key={c.id} className="border-t">
+                    <tr key={c.id} className="border-t border-border">
                       <td className="px-3 py-2">
                         <input type="checkbox" checked={c.included} onChange={(e) => updateCourse(c.id, { included: e.target.checked })} />
                       </td>
@@ -402,10 +420,15 @@ export default function CourseEvaluator() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex gap-1">
-                          <Button variant="outline" size="sm" onClick={() => addCourseAfter(c.id)} className="h-8 px-2">
-                            <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                          <Button variant="outline" size="sm" onClick={() => addCourseAfter(c.id)} className="h-8 px-2 gap-1.5">
+                            <Plus className="h-3.5 w-3.5" /> Add
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => removeCourse(c.id)} className="text-red-600 hover:bg-red-50 h-8 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCourse(c.id)}
+                            className="h-8 px-2 text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -419,9 +442,9 @@ export default function CourseEvaluator() {
         </div>
 
         {/* Summary */}
-        <div className="flex items-center justify-between border-t pt-4">
-          <div className="text-sm text-gray-600">Total Credits: <span className="font-medium text-gray-900">{totalCredits}</span></div>
-          <div className="text-lg">CGPA: <span className="font-semibold">{cgpa.toFixed(3)}</span></div>
+        <div className="flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
+          <div>Total Credits: <span className="font-medium text-foreground">{totalCredits}</span></div>
+          <div className="text-lg text-foreground">CGPA: <span className="font-semibold">{cgpa.toFixed(3)}</span></div>
         </div>
       </CardContent>
     </Card>

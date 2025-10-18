@@ -133,8 +133,8 @@ export default function DocumentsPage({
   // Fixed: Handle loading states
   if (userLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center transition-colors">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     )
   }
@@ -142,12 +142,12 @@ export default function DocumentsPage({
   // Fixed: Handle no user state
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-background text-foreground transition-colors">
         <div className="max-w-7xl mx-auto p-6 space-y-8">
-          <div className="text-center">
-            <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h1 className="text-4xl font-bold text-gray-900">Documents Center</h1>
-            <p className="text-lg text-gray-600">Please login to manage your documents</p>
+          <div className="text-center space-y-2">
+            <GraduationCap className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
+            <h1 className="text-4xl font-bold">Documents Center</h1>
+            <p className="text-lg text-muted-foreground">Please login to manage your documents</p>
           </div>
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function DocumentsPage({
 
         {/* Uploaded Documents Section */}
         <Card className="shadow-sm bg-card">
-          <CardHeader className="border-b bg-card">
+          <CardHeader className="border-b border-border bg-card">
             <CardTitle className="flex items-center justify-between text-xl text-foreground">
               <div className="flex items-center">
                 <FileText className="w-6 h-6 mr-3 text-muted-foreground" />
@@ -233,7 +233,7 @@ export default function DocumentsPage({
           <CardContent className="p-6">
             {propDocuments.length === 0 ? (
               <div className="text-center py-12">
-                <div className="bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                <div className="border border-border/60 bg-muted/60 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                   <FileText className="w-10 h-10 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">No documents uploaded yet</h3>
@@ -244,7 +244,7 @@ export default function DocumentsPage({
                 {propDocuments.map((doc) => {
                   const typeInfo = getDocumentTypeInfo(doc.type)
                   return (
-                    <Card key={doc.id} className="border border-gray-200 hover:shadow-md transition-all duration-200 dark:bg-card dark:border-gray-700">
+                    <Card key={doc.id} className="border border-border hover:shadow-md transition-all duration-200">
                       <CardContent className="p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                           <div className="flex-1 min-w-0">
@@ -261,7 +261,7 @@ export default function DocumentsPage({
                             </div>
                             
                             {doc.note && (
-                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-200 dark:bg-gray-800 dark:border-blue-300/30">
+                              <div className="mb-3 p-3 rounded-lg border-l-4 border-primary/40 bg-primary/10">
                                 <p className="text-sm text-foreground">
                                   <span className="font-medium">Note:</span> {doc.note}
                                 </p>
@@ -285,7 +285,7 @@ export default function DocumentsPage({
                               variant="outline"
                               size="sm"
                               onClick={() => window.open(doc.file_url, '_blank')}
-                              className="text-blue-600 border-blue-600 hover:bg-blue-50 w-full sm:w-auto dark:hover:bg-blue-900/20"
+                              className="w-full sm:w-auto border-primary text-primary hover:bg-primary/10 dark:hover:bg-primary/20"
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View
